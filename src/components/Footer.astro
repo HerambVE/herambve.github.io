@@ -1,5 +1,5 @@
 ---
-import { Mail, Github, Twitter, Rss, Linkedin } from "lucide-astro";
+import { Mail, Github, Twitter, Rss, Linkedin, FileText } from "lucide-astro";
 import BrandIcon from "./BrandIcon.astro";
 import { SOCIAL_LINKS } from "../data/social";
 import { formatVersionDate } from "../utils/dates";
@@ -11,6 +11,7 @@ const ICONS = {
 	twitter: Twitter,
 	rss: Rss,
 	linkedin: Linkedin,
+	resume: FileText,
 } as const;
 
 const versionStamp = `${SITE_TITLE} v${formatVersionDate(new Date())}`;

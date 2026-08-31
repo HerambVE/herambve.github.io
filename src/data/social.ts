@@ -1,7 +1,7 @@
 export type SocialLink = {
 	label: string;
 	href: string;
-	icon: "mail" | "github" | "twitter" | "rss" | "linkedin";
+	icon: "mail" | "github" | "twitter" | "rss" | "linkedin" | "resume";
 	external?: boolean;
 };
 
@@ -22,6 +22,12 @@ export const SOCIAL_LINKS: SocialLink[] = [
 		label: "LinkedIn",
 		href: "https://www.linkedin.com/in/herambve/",
 		icon: "linkedin",
+		external: true,
+	},
+	{
+		label: "Resume",
+		href: "https://herambve.github.io/resume/",
+		icon: "resume",
 		external: true,
 	},
 	{
