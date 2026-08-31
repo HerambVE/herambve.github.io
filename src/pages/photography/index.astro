@@ -9,6 +9,12 @@ import { MapPin, Maximize2, X, Camera } from "lucide-astro";
 const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
 const resolveUrl = (path: string) =>
 	path.startsWith("/") && !path.startsWith("//") ? `${baseUrl}${path}` : path;
+
+/** Map a photo src to its optimized WebP thumbnail */
+const thumbUrl = (src: string) => {
+	const name = src.replace(/^.*\//, "").replace(/\.[^.]+$/, "");
+	return resolveUrl(`/photography/thumb/${name}.webp`);
+};
 ---
 
 <!doctype html>
@@ -46,12 +52,12 @@ const resolveUrl = (path: string) =>
 						>
 							<div class="photo-media-wrapper">
 								<img
-									src={resolveUrl(photo.src)}
-									alt={photo.alt}
-									loading="lazy"
-									decoding="async"
-									class="photo-card-img"
-								/>
+								src={thumbUrl(photo.src)}
+								alt={photo.alt}
+								loading="lazy"
+								decoding="async"
+								class="photo-card-img"
+							/>
 								<div class="photo-media-overlay">
 									<span class="expand-indicator">
 										<Maximize2 size={16} />
