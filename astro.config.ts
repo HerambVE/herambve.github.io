@@ -41,7 +41,7 @@ const remarkPrettyArrows: Plugin<[], Root> = () => {
 export default defineConfig({
 	site: "https://herambve.github.io",
 	base: "/personal0website",
-	redirects: { "/research": "/projects", "/research/[...slug]": "/projects/[...slug]" },
+	redirects: { "/research": "/personal0website/projects" },
 	integrations: [
 		mdx({
 			remarkPlugins: [remarkMath, remarkPrettyArrows],
@@ -65,5 +65,7 @@ export default defineConfig({
 		rehypePlugins: [rehypeKatex],
 	},
 });
+
+
 
 
