@@ -1,0 +1,98 @@
+﻿---
+import BaseHead from "../components/BaseHead.astro";
+import Header from "../components/Header.astro";
+import Footer from "../components/Footer.astro";
+import { SITE_DESCRIPTION, SITE_TITLE } from "../consts";
+import Link from "../components/Link.astro";
+import Accordion from "../components/Accordion.astro";
+import "../styles/pages/home.css";
+
+const githubUsername = "HerambVE";
+const githubProfileUrl = `https://github.com/${githubUsername}`;
+const githubGraphUrl = `https://ghchart.rshah.org/8b5cf6/${githubUsername}`;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
+	</head>
+	<body>
+		<Header />
+		<main class="home-page">
+			<h1 class="hero-title">Hi, I'm Heramb</h1>
+			<p>AI & Data Science Engineer, Backend & Systems Developer based in Mumbai, India</p>
+
+			<section class="github-activity" aria-label="GitHub activity">
+				<a
+					class="github-graph-link"
+					href={githubProfileUrl}
+					target="_blank"
+					rel="noopener noreferrer"
+					aria-label={`GitHub profile for ${githubUsername}`}
+				>
+					<div class="github-graph-frame">
+						<div class="github-graph-crop">
+							<img
+								class="github-graph"
+								src={githubGraphUrl}
+								alt={`GitHub contribution graph for ${githubUsername}`}
+								loading="lazy"
+								decoding="async"
+							/>
+						</div>
+					</div>
+				</a>
+			</section>
+
+			<p class="check-in">
+				Thanks for checking in! You can learn more about my background, journey, and life outside tech <Link href="/about" fontWeight="semibold">here</Link>.
+			</p>
+
+			<p>Right now, I'm mostly focused on:</p>
+			<ul>
+				<li>
+					Distributed systems, async media pipelines, and backend microservices (FastAPI, Redis, Celery, Docker)
+				</li>
+				<li>
+					Applied Deep Learning & NLP systems (RoBERTa emotion classification, LLM context diffing, whisper transcription)
+				</li>
+				<li>
+					Systems programming, core data structures & algorithms in C/C++ and Python
+				</li>
+				<li>
+					Data pipelines, statistical modeling, and recommendation systems
+				</li>
+			</ul>
+
+			<Accordion label="About My Background & Collaboration">
+				<p>
+					I'm currently an AI & Data Science engineering student at Thadomal Shahani Engineering College (TSEC), Mumbai (graduating in 2026).
+					I enjoy building end-to-end systems from first principles—whether that's low-level algorithms, distributed backends, or AI-integrated applications.
+				</p>
+				<p>
+					Some of my recent work includes architecting the <strong>Semantic Drift Media Engine (SDME)</strong>—a containerized microservices platform for async audio/text processing with FastAPI, Celery, and Redis—and building emotion-aware AI chatbots using fine-tuned RoBERTa models coupled with real-time inference microservices.
+				</p>
+				<p>
+					I believe in relentless hands-on learning: building real systems, tackling challenging architectural constraints, asking hard questions, and refining intuition through deep technical inquiry.
+					If you're working on interesting engineering challenges in distributed systems, backend infrastructure, or applied AI/ML, I'd love to connect!
+				</p>
+				<p>
+					<Link href="mailto:vengurlekarheramb19@gmail.com" fontWeight="medium"> Email </Link>
+					or
+					<Link fontWeight="medium" href="https://www.linkedin.com/in/herambve/">
+						LinkedIn
+					</Link>
+					work best for me; I'll get back to you as soon as I can.
+				</p>
+			</Accordion>
+			<p>
+				You can also check out my <Link href="/blog" fontWeight="medium"
+					>blog</Link
+				> or <Link href="/research" fontWeight="medium">research & projects</Link>
+				pages for architecture writeups and worklogs, or reach out directly to chat!
+			</p>
+		</main>
+		<Footer />
+	</body>
+</html>

@@ -1,0 +1,130 @@
+---
+import BrandIcon from "./BrandIcon.astro";
+import { findNavLabel } from "../data/navigation";
+
+interface Props {
+	customTitle?: string;
+}
+
+const { customTitle } = Astro.props;
+const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+const pathname = Astro.url.pathname.replace(import.meta.env.BASE_URL, "");
+const pathSegments = pathname.split("/").filter((segment) => segment !== "");
+
+const breadcrumbs = [
+	{
+		label: "Home",
+		href: import.meta.env.BASE_URL,
+		isActive: pathname === "" || pathname === "/",
+		isHome: true,
+	},
+];
+
+let currentPath = "";
+pathSegments.forEach((segment, index) => {
+	currentPath += `/${segment}`;
+	const isLast = index === pathSegments.length - 1;
+	const navLabel = findNavLabel(segment);
+	const label =
+		isLast && customTitle
+			? customTitle
+			: (navLabel ?? segment.charAt(0).toUpperCase() + segment.slice(1));
+	breadcrumbs.push({
+		label,
+		href: `${baseUrl}${currentPath}`,
+		isActive: isLast,
+		isHome: false,
+	});
+});
+---
+
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+	{
+		breadcrumbs.map((crumb, index) => (
+			<>
+				{index > 0 && <span class="separator">/</span>}
+				<a
+					href={crumb.href}
+					class:list={[
+						"breadcrumb-link",
+						{ active: crumb.isActive, home: crumb.isHome },
+					]}
+					aria-current={crumb.isActive ? "page" : undefined}
+				>
+					{crumb.isHome ? <BrandIcon alt="Home" /> : crumb.label}
+				</a>
+			</>
+		))
+	}
+</nav>
+
+<style>
+	.breadcrumbs {
+		display: flex;
+		align-items: center;
+		gap: 0.5em;
+		flex: 1;
+		flex-wrap: nowrap;
+		min-width: 0;
+		line-height: var(--nav-text-line-height);
+	}
+
+	.separator {
+		display: inline-flex;
+		align-items: center;
+		line-height: var(--nav-text-line-height);
+		color: var(--text-color);
+		flex: 0 0 auto;
+		opacity: 0.4;
+		font-weight: var(--font-weight-light);
+	}
+
+	.breadcrumb-link {
+		display: block;
+		flex: 0 0 auto;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		text-decoration: none;
+		white-space: nowrap;
+		line-height: var(--nav-text-line-height);
+		color: var(--text-color);
+		opacity: 0.5;
+		font-weight: var(--font-weight-regular);
+		transition:
+			opacity 0.2s ease,
+			color 0.2s ease;
+	}
+
+	.breadcrumb-link:hover {
+		opacity: 0.8;
+		color: var(--accent-purple);
+	}
+
+	.breadcrumb-link.active {
+		flex: 1 1 auto;
+		opacity: 1;
+		color: var(--text-color);
+		font-weight: var(--font-weight-medium);
+		pointer-events: none;
+	}
+
+	.breadcrumb-link.home {
+		display: inline-flex;
+		align-items: center;
+		flex: 0 0 auto;
+		line-height: 1;
+		overflow: visible;
+		opacity: 1;
+	}
+
+	.breadcrumb-link.home:hover {
+		opacity: 1;
+	}
+
+	@media (max-width: 360px) {
+		.breadcrumbs {
+			gap: 0.4em;
+		}
+	}
+</style>

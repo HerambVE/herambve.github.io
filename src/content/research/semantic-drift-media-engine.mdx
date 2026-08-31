@@ -1,0 +1,31 @@
+﻿---
+title: "Semantic Drift Media Engine (SDME)"
+subtitle: "A containerized AI microservices platform for asynchronous media transcription, topic extraction, and contextual reference analysis."
+image: "../../assets/placeholder-image.png"
+date: 2026-06-15
+authors:
+  - name: "Heramb Vengurlekar"
+    email: "vengurlekarheramb19@gmail.com"
+    affiliation: "Thadomal Shahani Engineering College"
+codeUrl: "https://github.com/HerambVE/sdme"
+keywords:
+  - "FastAPI"
+  - "Celery"
+  - "Redis"
+  - "Whisper"
+  - "Docker"
+  - "Gemini API"
+draft: false
+---
+
+## Overview
+
+The **Semantic Drift Media Engine (SDME)** is a production-ready asynchronous media processing backend designed to handle audio/video ingestion, speech transcription, and contextual synthesis.
+
+## Key Architecture & Decisions
+
+1. **Microservices with FastAPI & Next.js:** Decoupled client interactions from heavy CPU/GPU processing pipelines.
+2. **Distributed Queue with Celery & Redis:** Long-running transcription and analysis tasks are offloaded asynchronously, keeping web API response latencies minimal.
+3. **Local Whisper Optimization:** Implemented lazy-loading and quantization strategies to run speech-to-text transcription within strict **512MB RAM constraints**.
+4. **LLM Synthesis & BYOK Security:** Automated topic extraction and academic reference indexing via Google Gemini API with a Bring Your Own Key (BYOK) paradigm.
+5. **Container Orchestration:** Deployed using Docker Compose with isolated networks and health-checked workers.

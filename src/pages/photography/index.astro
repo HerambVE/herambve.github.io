@@ -1,0 +1,418 @@
+---
+import BaseHead from "../../components/BaseHead.astro";
+import Header from "../../components/Header.astro";
+import Footer from "../../components/Footer.astro";
+import { SITE_TITLE } from "../../consts";
+import { PHOTOGRAPHY_CONFIG, PHOTOS } from "../../data/photography";
+import { MapPin, Maximize2, X, Camera } from "lucide-astro";
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<BaseHead
+			title={`${PHOTOGRAPHY_CONFIG.title} | ${SITE_TITLE}`}
+			description={PHOTOGRAPHY_CONFIG.description}
+		/>
+	</head>
+	<body>
+		<Header />
+		<main class="photography-page">
+			<header class="gallery-header">
+				<div class="header-badge">
+					<Camera size={14} />
+					<span>Visual Gallery</span>
+				</div>
+				<h1 class="page-title">{PHOTOGRAPHY_CONFIG.title}</h1>
+				<p class="page-subheading">{PHOTOGRAPHY_CONFIG.subheading}</p>
+			</header>
+
+			<section class="gallery-masonry-grid" aria-label="Photo Gallery Cards">
+				{
+					PHOTOS.map((photo, index) => (
+						<article
+							class="photo-card"
+							id={photo.id}
+							data-index={index}
+							data-src={photo.src}
+							data-title={photo.title}
+							data-location={photo.location || ""}
+							data-caption={photo.caption}
+							data-alt={photo.alt}
+						>
+							<div class="photo-media-wrapper">
+								<img
+									src={photo.src}
+									alt={photo.alt}
+									loading="lazy"
+									decoding="async"
+									class="photo-card-img"
+								/>
+								<div class="photo-media-overlay">
+									<span class="expand-indicator">
+										<Maximize2 size={16} />
+									</span>
+								</div>
+							</div>
+							<div class="photo-card-content">
+								<div class="photo-card-topline">
+									<h2 class="photo-card-title">{photo.title}</h2>
+									{photo.location && (
+										<div class="photo-location">
+											<MapPin size={12} class="pin-icon" />
+											<span>{photo.location}</span>
+										</div>
+									)}
+								</div>
+								<p class="photo-card-caption">{photo.caption}</p>
+							</div>
+						</article>
+					))
+				}
+			</section>
+		</main>
+
+		<!-- Interactive Lightbox Modal -->
+		<dialog id="lightbox-modal" class="lightbox-dialog" aria-modal="true">
+			<div class="lightbox-box">
+				<button class="lightbox-close" id="lightbox-close" aria-label="Close preview">
+					<X size={20} />
+				</button>
+				<div class="lightbox-image-container">
+					<img id="lightbox-img" src="" alt="Photo preview" />
+				</div>
+				<div class="lightbox-details">
+					<div class="lightbox-details-header">
+						<h3 id="lightbox-title"></h3>
+						<span id="lightbox-loc" class="lightbox-loc"></span>
+					</div>
+					<p id="lightbox-caption"></p>
+				</div>
+			</div>
+		</dialog>
+
+		<Footer />
+	</body>
+</html>
+
+<style>
+	.photography-page {
+		max-width: 1000px;
+		margin: 0 auto;
+		padding: 0 1.25em 4em;
+	}
+
+	.gallery-header {
+		margin-bottom: 2.5em;
+	}
+
+	.header-badge {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-family: var(--font-family-code);
+		font-size: 0.78em;
+		font-weight: 500;
+		color: var(--accent-purple);
+		background: rgba(139, 92, 246, 0.08);
+		border: 1px solid rgba(139, 92, 246, 0.2);
+		padding: 3px 9px;
+		border-radius: 999px;
+		margin-bottom: 0.75em;
+	}
+
+	.page-title {
+		font-family: var(--font-family-heading);
+		font-size: 2.1em;
+		margin: 0 0 0.3em 0;
+		color: var(--text-color);
+		letter-spacing: -0.02em;
+	}
+
+	.page-subheading {
+		color: var(--text-color-light);
+		font-size: 1em;
+		margin: 0;
+		line-height: 1.6;
+		max-width: 680px;
+	}
+
+	/* Masonry multi-column layout */
+	.gallery-masonry-grid {
+		column-count: 2;
+		column-gap: 1.5em;
+	}
+
+	@media (max-width: 700px) {
+		.gallery-masonry-grid {
+			column-count: 1;
+		}
+	}
+
+	/* Photo Card */
+	.photo-card {
+		break-inside: avoid;
+		margin-bottom: 1.5em;
+		background: rgba(128, 128, 128, 0.04);
+		border: 1px solid rgba(128, 128, 128, 0.16);
+		border-radius: 14px;
+		overflow: hidden;
+		transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+			box-shadow 0.25s ease,
+			border-color 0.25s ease;
+		cursor: pointer;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.photo-card:hover {
+		transform: translateY(-4px);
+		border-color: var(--accent-purple);
+		box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+	}
+
+	[data-theme="dark"] .photo-card {
+		background: rgba(255, 255, 255, 0.02);
+		border-color: rgba(255, 255, 255, 0.1);
+	}
+
+	[data-theme="dark"] .photo-card:hover {
+		box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+		border-color: var(--accent-purple);
+	}
+
+	.photo-media-wrapper {
+		position: relative;
+		overflow: hidden;
+		background: rgba(128, 128, 128, 0.06);
+	}
+
+	.photo-card-img {
+		width: 100%;
+		height: auto;
+		display: block;
+		transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+	}
+
+	.photo-card:hover .photo-card-img {
+		transform: scale(1.03);
+	}
+
+	.photo-media-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: rgba(0, 0, 0, 0.25);
+		opacity: 0;
+		transition: opacity 0.25s ease;
+		display: flex;
+		align-items: flex-end;
+		justify-content: flex-end;
+		padding: 12px;
+	}
+
+	.photo-card:hover .photo-media-overlay {
+		opacity: 1;
+	}
+
+	.expand-indicator {
+		background: rgba(0, 0, 0, 0.7);
+		color: #ffffff;
+		width: 32px;
+		height: 32px;
+		border-radius: 8px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		backdrop-filter: blur(4px);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+	}
+
+	.photo-card-content {
+		padding: 1.1em 1.25em 1.25em;
+		display: flex;
+		flex-direction: column;
+		gap: 0.6em;
+	}
+
+	.photo-card-topline {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 0.75em;
+		flex-wrap: wrap;
+	}
+
+	.photo-card-title {
+		font-family: var(--font-family-heading);
+		font-size: 1.1em;
+		font-weight: 600;
+		margin: 0;
+		color: var(--text-color);
+	}
+
+	.photo-location {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font-size: 0.78em;
+		font-family: var(--font-family-code);
+		color: var(--text-color-muted);
+	}
+
+	.pin-icon {
+		color: var(--accent-purple);
+		flex-shrink: 0;
+	}
+
+	.photo-card-caption {
+		font-size: 0.88em;
+		line-height: 1.55;
+		color: var(--text-color-light);
+		margin: 0;
+	}
+
+	/* Lightbox Dialog */
+	.lightbox-dialog {
+		padding: 0;
+		border: none;
+		border-radius: 16px;
+		background: transparent;
+		max-width: 90vw;
+		max-height: 94vh;
+		overflow: hidden;
+	}
+
+	.lightbox-dialog::backdrop {
+		background: rgba(0, 0, 0, 0.85);
+		backdrop-filter: blur(8px);
+	}
+
+	.lightbox-box {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		max-width: 900px;
+		background: var(--bg-color);
+		border: 1px solid rgba(128, 128, 128, 0.2);
+		border-radius: 14px;
+		overflow: hidden;
+		box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+	}
+
+	.lightbox-close {
+		position: absolute;
+		top: 12px;
+		right: 12px;
+		background: rgba(0, 0, 0, 0.65);
+		color: #ffffff;
+		border: none;
+		width: 36px;
+		height: 36px;
+		border-radius: 50%;
+		cursor: pointer;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		transition: background 0.2s ease, transform 0.15s ease;
+		z-index: 20;
+		backdrop-filter: blur(4px);
+	}
+
+	.lightbox-close:hover {
+		background: var(--accent-purple);
+		transform: scale(1.05);
+	}
+
+	.lightbox-image-container {
+		background: #050505;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		max-height: 72vh;
+		overflow: hidden;
+	}
+
+	.lightbox-image-container img {
+		max-width: 100%;
+		max-height: 72vh;
+		object-fit: contain;
+		display: block;
+	}
+
+	.lightbox-details {
+		padding: 1.1em 1.4em;
+		background: var(--bg-color);
+		border-top: 1px solid rgba(128, 128, 128, 0.15);
+	}
+
+	.lightbox-details-header {
+		display: flex;
+		align-items: baseline;
+		justify-content: space-between;
+		gap: 1em;
+		margin-bottom: 0.4em;
+		flex-wrap: wrap;
+	}
+
+	.lightbox-details-header h3 {
+		font-family: var(--font-family-heading);
+		font-size: 1.15em;
+		margin: 0;
+		color: var(--text-color);
+	}
+
+	.lightbox-loc {
+		font-family: var(--font-family-code);
+		font-size: 0.8em;
+		color: var(--accent-purple);
+	}
+
+	.lightbox-details p {
+		font-size: 0.9em;
+		line-height: 1.5;
+		color: var(--text-color-light);
+		margin: 0;
+	}
+</style>
+
+<script>
+	const dialog = document.getElementById("lightbox-modal") as HTMLDialogElement;
+	const lightboxImg = document.getElementById("lightbox-img") as HTMLImageElement;
+	const lightboxTitle = document.getElementById("lightbox-title");
+	const lightboxLoc = document.getElementById("lightbox-loc");
+	const lightboxCaption = document.getElementById("lightbox-caption");
+	const closeBtn = document.getElementById("lightbox-close");
+	const cards = document.querySelectorAll(".photo-card");
+
+	cards.forEach((card) => {
+		card.addEventListener("click", () => {
+			const src = card.getAttribute("data-src") || "";
+			const alt = card.getAttribute("data-alt") || "";
+			const title = card.getAttribute("data-title") || "";
+			const loc = card.getAttribute("data-location") || "";
+			const caption = card.getAttribute("data-caption") || "";
+
+			if (lightboxImg && dialog) {
+				lightboxImg.src = src;
+				lightboxImg.alt = alt;
+				if (lightboxTitle) lightboxTitle.textContent = title;
+				if (lightboxLoc) lightboxLoc.textContent = loc ? `📍 ${loc}` : "";
+				if (lightboxCaption) lightboxCaption.textContent = caption;
+				dialog.showModal();
+			}
+		});
+	});
+
+	closeBtn?.addEventListener("click", () => {
+		dialog?.close();
+	});
+
+	dialog?.addEventListener("click", (e) => {
+		if (e.target === dialog) {
+			dialog.close();
+		}
+	});
+</script>

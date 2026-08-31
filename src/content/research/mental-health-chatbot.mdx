@@ -1,0 +1,29 @@
+﻿---
+title: "Emotion-Aware Mental Health Chatbot"
+subtitle: "A hybrid NLP architecture separating emotion classification and empathetic response generation."
+image: "../../assets/placeholder-image.png"
+date: 2026-03-20
+authors:
+  - name: "Heramb Vengurlekar"
+    email: "vengurlekarheramb19@gmail.com"
+    affiliation: "Thadomal Shahani Engineering College"
+codeUrl: "https://github.com/HerambVE/chat-bot"
+keywords:
+  - "RoBERTa"
+  - "NLP"
+  - "GoEmotions"
+  - "React"
+  - "Flask"
+  - "Node.js"
+draft: false
+---
+
+## Overview
+
+An empathetic conversational AI system that detects nuanced user emotions and dynamically conditions LLM response generation to provide supportive, context-aware interactions.
+
+## Architecture & Technical Highlights
+
+1. **Emotion Classification:** Fine-tuned **RoBERTa** on the multi-label **GoEmotions** dataset to capture subtle emotional cues beyond binary sentiment.
+2. **Two-Stage Generation Pipeline:** Decoupled classification from generation to prevent hallucinated emotional assumptions and maintain therapeutic guardrails.
+3. **Full-Stack Microservices:** React UI connected to Node.js backend, communicating via REST with a dedicated Flask inference microservice for real-time sentiment scoring.

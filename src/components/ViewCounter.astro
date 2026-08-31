@@ -1,0 +1,273 @@
+---
+/**
+ * ViewCounter component
+ *
+ * Displays view count for a blog post and increments the count on page load.
+ * Uses Cloudflare Worker API for persistence.
+ */
+
+interface Props {
+	slug: string;
+	workerUrl?: string;
+	readOnly?: boolean; // to only fetch count without incrementing
+	trackOnly?: boolean; // to track view but not render
+}
+
+const {
+	slug,
+	workerUrl = import.meta.env.PUBLIC_WORKER_URL,
+	readOnly = false,
+	trackOnly = false,
+} = Astro.props;
+const workerApiKey = import.meta.env.PUBLIC_VIEW_COUNTER_API_KEY ?? "";
+---
+
+{trackOnly ? (
+	<span
+		class="view-tracker"
+		data-slug={slug}
+		data-worker-url={workerUrl}
+		data-worker-api-key={workerApiKey}
+		style="display:none"
+	/>
+) : (
+	<div
+		class="view-counter"
+		data-slug={slug}
+		data-worker-url={workerUrl}
+		data-read-only={readOnly.toString()}
+		data-worker-api-key={workerApiKey}
+	>
+		<span class="view-separator" aria-hidden="true">•</span>
+		<span class="view-count" aria-label="View count">
+			<span class="view-count-number">--</span>
+		</span>
+	</div>
+)}
+
+<script>
+	const isLocalEnvironment = () => {
+		const { hostname, port } = window.location;
+
+		if (!hostname) {
+			return false;
+		}
+
+		const normalizedHost = hostname.toLowerCase();
+		const localHostnames = ["localhost", "127.0.0.1", "0.0.0.0", "[::1]"];
+
+		if (localHostnames.includes(normalizedHost)) {
+			return true;
+		}
+
+		if (
+			normalizedHost.endsWith(".local") ||
+			normalizedHost.includes("localhost")
+		) {
+			return true;
+		}
+
+		if (port && port !== "80" && port !== "443") {
+			return true;
+		}
+
+		return false;
+	};
+
+	async function trackAndDisplayViews() {
+		const containers = document.querySelectorAll(".view-counter");
+
+		containers.forEach(async (container) => {
+			const slug = container.getAttribute("data-slug");
+			const workerUrl = container.getAttribute("data-worker-url");
+			const readOnly = container.getAttribute("data-read-only") === "true";
+			const workerApiKey = container.getAttribute("data-worker-api-key") || "";
+			const numberElement = container.querySelector(".view-count-number");
+
+			if (!slug || !workerUrl || !numberElement) return;
+
+			// skipping API calls in local development
+			if (isLocalEnvironment()) {
+				numberElement.textContent = "-- reads (dev)";
+				container.classList.add("loaded");
+				return;
+			}
+
+			const prefixedSlug = slug;
+
+			// checks if user has already viewed this post recently (24 hours)
+			const viewKey = `viewed_${prefixedSlug}`;
+			const failureKey = `view_display_failed_${prefixedSlug}`;
+			const lastViewed = localStorage.getItem(viewKey);
+			const lastFailed = Number(localStorage.getItem(failureKey));
+			const now = Date.now();
+			const twentyFourHours = 24 * 60 * 60 * 1000;
+			const failureCooldown = 5 * 60 * 1000;
+
+			// if read-only mode (e.g., on listing page), never increments
+			// otherwise, checks if viewed within last 24 hours
+			const shouldIncrement =
+				!readOnly &&
+				(!lastViewed || now - parseInt(lastViewed) > twentyFourHours);
+
+			try {
+				// increments the view count only if not recently viewed
+				const method = shouldIncrement ? "POST" : "GET";
+				const response = await fetch(`${workerUrl}/views/${prefixedSlug}`, {
+					method: method,
+					headers: {
+						"Content-Type": "application/json",
+						...(workerApiKey ? { "X-Worker-Api-Key": workerApiKey } : {}),
+					},
+				});
+
+				if (!response.ok) {
+					const shouldWarn =
+						!Number.isFinite(lastFailed) || now - lastFailed > failureCooldown;
+					if (shouldWarn) {
+						console.warn(
+							`View count fetch failed for ${prefixedSlug}: ${response.status}`,
+						);
+						localStorage.setItem(failureKey, now.toString());
+					}
+					return;
+				}
+
+				const data = await response.json();
+
+				// marks as viewed if we incremented
+				if (shouldIncrement) {
+					localStorage.setItem(viewKey, now.toString());
+				}
+
+				localStorage.removeItem(failureKey);
+
+				// hides the counter if 0 views
+				if (data.views === 0) {
+					if (container instanceof HTMLElement) {
+						container.style.display = "none";
+					}
+					return;
+				}
+
+				const formattedCount = new Intl.NumberFormat("en-US").format(
+					data.views,
+				);
+
+				const label = data.views === 1 ? "read" : "reads";
+				numberElement.textContent = `${formattedCount} ${label}`;
+
+				// shows the counter once data is ready
+				container.classList.add("loaded");
+			} catch (error) {
+				const shouldWarn =
+					!Number.isFinite(lastFailed) || now - lastFailed > failureCooldown;
+				if (shouldWarn) {
+					console.error("Error tracking views:", error);
+					localStorage.setItem(failureKey, now.toString());
+				}
+			}
+		});
+	}
+
+	async function trackViewsOnly() {
+		const trackers = document.querySelectorAll(".view-tracker");
+
+		trackers.forEach(async (tracker) => {
+			const slug = tracker.getAttribute("data-slug");
+			const workerUrl = tracker.getAttribute("data-worker-url");
+			const workerApiKey = tracker.getAttribute("data-worker-api-key") || "";
+
+			if (!slug || !workerUrl) return;
+			if (isLocalEnvironment()) return;
+
+			const hasTrackingCounter = Array.from(
+				document.querySelectorAll(".view-counter"),
+			).some((container) => {
+				const counterSlug = container.getAttribute("data-slug");
+				const isReadOnly = container.getAttribute("data-read-only") === "true";
+				return counterSlug === slug && !isReadOnly;
+			});
+
+			if (hasTrackingCounter) return;
+
+			const viewKey = `viewed_${slug}`;
+			const failureKey = `view_failed_${slug}`;
+			const lastViewed = localStorage.getItem(viewKey);
+			const lastFailed = Number(localStorage.getItem(failureKey));
+			const now = Date.now();
+			const twentyFourHours = 24 * 60 * 60 * 1000;
+			const failureCooldown = 5 * 60 * 1000;
+
+			if (!lastViewed || now - parseInt(lastViewed) > twentyFourHours) {
+				try {
+					const response = await fetch(`${workerUrl}/views/${slug}`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+							...(workerApiKey ? { "X-Worker-Api-Key": workerApiKey } : {}),
+						},
+					});
+					if (response.ok) {
+						localStorage.setItem(viewKey, now.toString());
+						localStorage.removeItem(failureKey);
+					} else {
+						const shouldWarn = !Number.isFinite(lastFailed) || now - lastFailed > failureCooldown;
+						if (shouldWarn) {
+							console.warn(`View tracking failed for ${slug}: ${response.status}`);
+							localStorage.setItem(failureKey, now.toString());
+						}
+					}
+				} catch (error) {
+					console.error("Error tracking view:", error);
+				}
+			}
+		});
+	}
+
+	trackAndDisplayViews();
+	trackViewsOnly();
+
+	document.addEventListener("astro:page-load", trackAndDisplayViews);
+	document.addEventListener("astro:page-load", trackViewsOnly);
+</script>
+
+<style>
+	.view-counter {
+		display: none;
+		align-items: baseline;
+		gap: 0.75em;
+		font-size: 0.9em;
+		color: var(--text-color-muted);
+		font-weight: var(--font-weight-regular);
+	}
+
+	.view-counter.loaded {
+		display: inline-flex;
+	}
+
+	.view-separator {
+		user-select: none;
+	}
+
+	.view-count {
+		display: inline-flex;
+		align-items: baseline;
+	}
+
+	.view-count-number {
+		font-variant-numeric: tabular-nums;
+	}
+
+	@media (max-width: 720px) {
+		.view-counter {
+			font-size: 0.85em;
+		}
+	}
+
+	@media (max-width: 480px) {
+		.view-counter {
+			font-size: 0.8em;
+		}
+	}
+</style>
