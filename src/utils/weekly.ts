@@ -14,7 +14,8 @@ export function getWeeklySlug({ date, week }: WeeklyRouteParts): string {
 }
 
 export function getWeeklyHref(parts: WeeklyRouteParts): string {
-	return `/weekly/${getWeeklySlug(parts)}/`;
+	const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+	return `${baseUrl}/weekly/${getWeeklySlug(parts)}/`;
 }
 
 export function formatWeeklyTitle({ date, week }: WeeklyRouteParts): string {

@@ -26,9 +26,13 @@ const versionStamp = `${SITE_TITLE} v${formatVersionDate(new Date())}`;
 					const Icon = ICONS[link.icon];
 					const target = link.external ? "_blank" : undefined;
 					const rel = link.external ? "noopener noreferrer" : undefined;
+					const resolvedHref =
+						typeof link.href === "string" && link.href.startsWith("/") && !link.href.startsWith("//")
+							? `${import.meta.env.BASE_URL.replace(/\/$/, "")}${link.href}`
+							: link.href;
 					return (
 						<a
-							href={link.href}
+							href={resolvedHref}
 							target={target}
 							rel={rel}
 							aria-label={link.label}
