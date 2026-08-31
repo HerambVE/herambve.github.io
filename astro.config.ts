@@ -40,8 +40,8 @@ const remarkPrettyArrows: Plugin<[], Root> = () => {
 // https://astro.build/config
 export default defineConfig({
 	site: "https://herambve.github.io",
-	base: "/personal0website",
-	redirects: { "/research": "/personal0website/projects" },
+	
+	redirects: { "/research": "/projects" },
 	integrations: [
 		mdx({
 			remarkPlugins: [remarkMath, remarkPrettyArrows],
@@ -65,6 +65,7 @@ export default defineConfig({
 		rehypePlugins: [rehypeKatex],
 	},
 });
+
 
 
 
