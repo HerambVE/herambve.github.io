@@ -1,0 +1,563 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"><link rel="canonical" href="https://herambve.github.io/personal0website/research/lora-and-friends/"><title> Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT</title><meta name="description" content=" Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT"><!-- OG --><meta property="og:type" content="article"><meta property="og:url" content="https://herambve.github.io/personal0website/research/lora-and-friends/"><meta property="og:title" content=" Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT"><meta property="og:description" content=" Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT"><meta property="og:image" content="https://herambve.github.io/personal0website/_astro/fig_04_paired_seed_slope.ClcugjqE.png"><!-- Twitter --><meta property="twitter:card" content="summary_large_image"><meta property="twitter:url" content="https://herambve.github.io/personal0website/research/lora-and-friends/"><meta property="twitter:title" content=" Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT"><meta property="twitter:description" content=" Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT"><meta property="twitter:image" content="https://herambve.github.io/personal0website/_astro/fig_04_paired_seed_slope.ClcugjqE.png"><script>
+	(function initializeTheme() {
+		try {
+			const stored =
+				typeof localStorage !== "undefined"
+					? localStorage.getItem("theme")
+					: null;
+			const prefersDark =
+				typeof window !== "undefined" &&
+				window.matchMedia &&
+				window.matchMedia("(prefers-color-scheme: dark)").matches;
+			const theme = stored ?? (prefersDark ? "dark" : "light");
+			document.documentElement.setAttribute("data-theme", theme);
+		} catch (error) {
+			console.error("Theme initialization failed:", error);
+		}
+	})();
+</script><link rel="stylesheet" href="/personal0website/_astro/_slug_.BDaMrAFG.css">
+<style>button[data-astro-cid-x3pjskd3]{font:inherit;background:none;border:none;cursor:pointer;padding:0;color:var(--text-color);display:flex;align-items:center;justify-content:center;position:relative;transition:color .2s ease;margin:0;width:2.2em;height:2.2em}button[data-astro-cid-x3pjskd3]:hover{color:var(--accent-purple)}.icon[data-astro-cid-x3pjskd3]{width:1.375em;height:1.375em}.sun-icon[data-astro-cid-x3pjskd3],.moon-icon[data-astro-cid-x3pjskd3]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}[data-theme=light] .sun-icon[data-astro-cid-x3pjskd3],[data-theme=dark] .moon-icon[data-astro-cid-x3pjskd3]{display:none}
+.view-counter[data-astro-cid-e75zxctz]{display:none;align-items:baseline;gap:.75em;font-size:.9em;color:var(--text-color-muted);font-weight:var(--font-weight-regular)}.view-counter[data-astro-cid-e75zxctz].loaded{display:inline-flex}.view-separator[data-astro-cid-e75zxctz]{user-select:none}.view-count[data-astro-cid-e75zxctz]{display:inline-flex;align-items:baseline}.view-count-number[data-astro-cid-e75zxctz]{font-variant-numeric:tabular-nums}@media(max-width:720px){.view-counter[data-astro-cid-e75zxctz]{font-size:.85em}}@media(max-width:480px){.view-counter[data-astro-cid-e75zxctz]{font-size:.8em}}
+</style></head> <body> <div class="research-theme-toggle"> <button class="theme-toggle" aria-label="Toggle theme" data-astro-cid-x3pjskd3> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="22" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" data-astro-cid-x3pjskd3="true" class="lucide lucide-sun sun-icon icon">  <circle cx="12" cy="12" r="4"></circle> <path d="M12 2v2"></path> <path d="M12 20v2"></path> <path d="m4.93 4.93 1.41 1.41"></path> <path d="m17.66 17.66 1.41 1.41"></path> <path d="M2 12h2"></path> <path d="M20 12h2"></path> <path d="m6.34 17.66-1.41 1.41"></path> <path d="m19.07 4.93-1.41 1.41"></path>  </svg> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="22" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" data-astro-cid-x3pjskd3="true" class="lucide lucide-moon moon-icon icon">  <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path>  </svg> </button>  <script type="module">const m=document.querySelectorAll(".theme-toggle");m.forEach(t=>{t.addEventListener("click",()=>{const e=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",e),localStorage.setItem("theme",e)})});</script> </div> <article class="research"> <header class="research-header"> <h1 class="research-title"> Is Attention Enough? A LoRA Target-Module Study on Qwen3-8B Math SFT</h1> <div class="research-authors"> <span class="author"> <span class="author-name">sumitdotml</span> <span class="author-affiliation"> Independent </span> <span class="author-email">vengurlekarheramb19@gmail.com</span> </span>  </div> <div class="research-date-container"> <time class="research-date" datetime="2026-05-17T00:00:00.000Z"> 17 May 2026 </time> </div>  <div class="research-links"> <a href="https://github.com/sumitdotml/lora-and-friends" target="_blank" rel="noopener noreferrer" class="research-link"> <img src="/personal0website/icons/github.svg" alt="" width="16" height="16" aria-hidden="true"> <span>Code</span> </a> <a href="https://huggingface.co/sumitdotml/lora-and-friends" target="_blank" rel="noopener noreferrer" class="research-link"> <img src="/personal0website/icons/huggingface.svg" alt="" width="18" height="18" aria-hidden="true"> <span>Models</span> </a>   </div> </header> <section class="abstract">  <p class="keywords"> <strong>Keywords:</strong> LoRA, Qwen3-8B, GSM8K, math fine-tuning, target modules </p> </section> <main class="research-content">  <h2 id="tldr">TL;DR</h2>
+<p>This experiment fine-tuned <code>Qwen3-8B</code> <span class="cite">
+(<a href="#ref-qwen3">Yang et al., 2025</a>)
+</span> on a math SFT dataset derived from <code>nvidia/OpenMathInstruct-2</code> <span class="cite">
+(<a href="#ref-openmathinstruct2">Toshniwal et al., 2024</a>)
+</span> and compared two LoRA <span class="cite">
+(<a href="#ref-lora">Hu et al., 2021</a>)
+</span> adapter scopes on GSM8K <span class="cite">
+(<a href="#ref-gsm8k">Cobbe et al., 2021</a>)
+</span>. Attention-only LoRA reached mean GSM8K accuracy <code>0.9055</code> across <code>N=3</code> seeds, while all-layer LoRA reached <code>0.9009</code>. The <code>0.455</code> percentage-point gap favors attention-only in this run set, but it is below the frozen <code>0.01</code> accuracy threshold for a winner claim that I had set in advance. I read this as a local result rather than a general rule, and as motivation for studying when narrower adapters are enough versus when broader adaptation is worth the extra size.</p>
+<p><strong>Published artifacts.</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Artifact</th><th>Location</th></tr></thead><tbody><tr><td>Experiment code and source artifacts</td><td><a href="https://github.com/sumitdotml/lora-and-friends">GitHub repository</a></td></tr><tr><td>Six selected LoRA adapter exports</td><td><a href="https://huggingface.co/sumitdotml/lora-and-friends">HuggingFace model repo</a></td></tr><tr><td>Frozen raw and rendered SFT dataset</td><td><a href="https://huggingface.co/datasets/sumitdotml/lora-and-friends-dataset">HuggingFace dataset repo</a></td></tr><tr><td>Third-party notices</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/THIRD_PARTY_NOTICES.md">GitHub notices file</a></td></tr></tbody></table>
+<h2 id="1-motivation">1. Motivation</h2>
+<p>LoRA adapts a frozen model by training low-rank updates rather than updating the full parameter set. The method is often treated as a single straightforward switch: you choose a rank, then a learning rate, and then decide which modules receive adapters. I did this study to isolate the last choice under one narrow setup.</p>
+<p>This study was also motivated by Thinking Machines Lab’s <em>LoRA Without Regret</em> <span class="cite">
+(<a href="#ref-lora-without-regret">Schulman and Thinking Machines Lab, 2025</a>)
+</span>, especially its discussion of where LoRA is applied and when broader adaptation may be worth the extra capacity.</p>
+<p>The practical question was whether adding MLP adapters helps a small math SFT run on <code>Qwen3-8B</code>, or whether attention-only adapters are enough. I intentionally kept the scope small: one base model, one dataset recipe, one benchmark, rank <code>8</code>, and three seeds per LoRA condition.</p>
+<h2 id="2-experimental-question">2. Experimental Question</h2>
+<p>The comparison was:</p>
+<ul>
+<li><code>attention_only</code>: train adapters for <code>q_proj</code>, <code>k_proj</code>, <code>v_proj</code>, and <code>o_proj</code>.</li>
+<li><code>all_layer</code>: train those attention adapters plus <code>gate_proj</code>, <code>up_proj</code>, and <code>down_proj</code>.</li>
+</ul>
+<p>Both conditions used the same rendered dataset, base model, rank, selected peak learning rate, training schedule, checkpoint-selection rule, and GSM8K eval contract so that I could draw comparisons in the most unbiased way possible. The intended variable was adapter scope.</p>
+<p>The frozen interpretation rule bounds how that mean gap can be read. A condition mean gap below <code>0.01</code> accuracy was to be reported as inconclusive rather than as a winner.</p>
+<h2 id="3-dataset-and-evaluation-contract">3. Dataset And Evaluation Contract</h2>
+<h3 id="31-dataset-curation">3.1 Dataset curation</h3>
+<p>The retained raw dataset is <code>openmath_original_clean</code>, built from the <code>train_1M</code> split of <code>nvidia/OpenMathInstruct-2</code>. It is the second candidate the project produced. An earlier candidate, <code>openmath_30k</code>, drew heavily on the augmented sources of the same split to hit a balanced 30,000-row target. Manual review packs on that candidate kept surfacing the same family of defects in the augmented rows, including impossible integer counts in physical settings, prompt-generation residue such as the literal string <code>A new problem:</code>, and chains of reasoning that silently restated the problem to match the boxed answer. After my repeated repair passes did not bring the rejection rate to zero, I decided to drop the augmented branch as I concluded that it was noisy &amp; unreliable and thus rebuilt the dataset again from original-source rows only.</p>
+<p>The retained build keeps rows from the <code>gsm8k</code> and <code>math</code> sources of <code>train_1M</code>. The strict acceptance gate considered <code>14,764</code> <code>gsm8k</code> candidates and <code>14,704</code> <code>math</code> candidates, for <code>29,468</code> original-source candidate rows. It accepted <code>14,618</code> <code>gsm8k</code> rows and <code>13,548</code> <code>math</code> rows, for <code>28,166</code> accepted rows. The retained reject reasons in the dataset manifest are <code>1,205</code> boxed-answer mismatches and <code>97</code> suspicious patterns across the two sources. After the <a href="#32-trainvalidation-split-rule">train/validation split repair</a>, the final raw split has <code>25,348</code> train rows and <code>2,818</code> validation rows.</p>
+<p>Automated checks on the retained build returned a boxed-match rate of <code>1.0</code> on both splits, no remaining suspicious rows, and no prompt-wrapper contamination hits. The same retained dataset is the input to every result in <a href="#5-results">Results</a> and every diagnostic in <a href="#6-diagnostics">Diagnostics</a>.</p>
+<h3 id="32-trainvalidation-split-rule">3.2 Train/validation split rule</h3>
+<p><code>OpenMathInstruct-2</code> can include multiple accepted solutions for the same underlying problem. A row-level random split therefore tends to place answer-variants of the same problem in both train and validation, which inflates validation likelihood and weakens the checkpoint-selection signal. The retained build groups rows by canonical problem text before assigning them to a split, so all variants of a given problem land on the same side.</p>
+<p>After the regrouping, the contamination report recorded <code>row_id_overlap_count = 0</code> and <code>problem_text_overlap_count = 0</code> between train and validation. The benchmark gate from <a href="#34-contamination-and-overlap-gates">Contamination and overlap gates</a> was applied to the same retained split.</p>
+<h3 id="33-rendered-training-contract">3.3 Rendered training contract</h3>
+<p>The rendered training dataset uses the <code>Qwen/Qwen3-8B</code> chat template with <code>enable_thinking=False</code> and the fixed system prompt:</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>You are a careful math solver. Solve the problem step by step. Put the final answer in \boxed{}.</span></span></code></pre>
+<p>The system prompt was kept because raw <code>OpenMathInstruct-2</code> problems do not always carry the boxed-answer instruction, and because the same prompt is required by the <a href="#35-gsm8k-evaluation-contract">GSM8K evaluation contract</a>. On a <code>500</code>-row tokenizer sample, the prompt added a constant <code>27</code> rendered tokens per example, which was small enough not to reshape the budget.</p>
+<h3 id="34-contamination-and-overlap-gates">3.4 Contamination and overlap gates</h3>
+<p>The retained contamination report passed two gates:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Check</th><th style="text-align:right">Result</th></tr></thead><tbody><tr><td>GSM8K test overlap against training-side <code>gsm8k</code> problems</td><td style="text-align:right"><code>0</code></td></tr><tr><td>Train/validation row-id overlap</td><td style="text-align:right"><code>0</code></td></tr><tr><td>Train/validation problem-text overlap</td><td style="text-align:right"><code>0</code></td></tr></tbody></table>
+<p>The GSM8K overlap check used the <code>openai/gsm8k</code> <code>main</code> test split and compared the training-side <code>problem</code> field for rows where <code>source == &quot;gsm8k&quot;</code>, after Unicode-NFKC, lowercase, and whitespace-collapsed normalization. A non-zero result on either gate was treated as blocking under the failure rule in the frozen evaluation contract; both gates had to pass before any benchmark run.</p>
+<h3 id="35-gsm8k-evaluation-contract">3.5 GSM8K evaluation contract</h3>
+<p>GSM8K evaluation used the <code>1,319</code>-example test split. Decoding was greedy with temperature <code>0</code>, <code>max_new_tokens=512</code>, no fallback answer extractor, and exact match after boxed-answer extraction and normalization. If a model did not emit a parseable boxed answer, the example was scored incorrect.</p>
+<h2 id="4-training-setup">4. Training Setup</h2>
+<h3 id="41-base-model-and-render-alignment">4.1 Base model and render alignment</h3>
+<p>The base model I decided to go with was <code>Qwen/Qwen3-8B</code>. Qwen3 supports both thinking and non-thinking modes in its chat template; however, I decided to disable thinking mode for the rendered SFT dataset and for evaluation so the training and evaluation would be consistent with matching contracts.</p>
+<p>The training-side render came from <code>AutoTokenizer.apply_chat_template(..., enable_thinking=False)</code> applied to each message list, which emits an empty <code>&lt;think&gt;\n\n&lt;/think&gt;</code> block before the assistant answer. The Tinker cookbook <code>qwen3_disable_thinking</code> renderer was correct for generation prompts but did not reproduce that SFT render along the supervised-training path. The runner therefore builds Tinker training datums directly from the HuggingFace chat template and masks the loss to the assistant-answer tokens after the rendered prompt prefix. With this correction, the training render and the GSM8K evaluation render produce the same prompt structure.</p>
+<h3 id="42-adapter-and-optimizer-defaults">4.2 Adapter and optimizer defaults</h3>
+<p>Both LoRA conditions used Tinker with rank <code>r=8</code>, <code>train_unembed=false</code>, and peak learning rate <code>3e-4</code>. Tinker <code>0.18.2</code> did not expose local <code>lora_alpha</code> or <code>lora_dropout</code> fields through this training path. The PEFT adapter configs now published on HuggingFace record the exported adapter values as <code>lora_alpha=32</code> and <code>lora_dropout=0</code>, so I will assume that those were being applied through the Tinker API’s backend. Additionally, the Adam internals (<code>beta1=0.9</code>, <code>beta2=0.95</code>, <code>eps=1e-12</code>, <code>weight_decay=0</code>, <code>grad_clip_norm=0</code>) are inherited from the Tinker <code>0.18.2</code> <code>AdamParams</code> defaults and are not tuned in this study.</p>
+<h3 id="43-lr-selection">4.3 LR selection</h3>
+<p>The small LR-selection run used seed <code>7</code>, <code>512</code> train rows, <code>128</code> validation rows, and the grid <code>1e-4</code>, <code>3e-4</code>, <code>1e-3</code>. Both conditions selected <code>3e-4</code> by minimum validation mean negative log-likelihood (NLL). Seed <code>7</code> was reserved for selection work so the main comparison seeds could be <code>0</code>, <code>1</code>, and <code>2</code>.</p>
+<h3 id="44-main-run-schedule">4.4 Main run schedule</h3>
+<p>Main training used seeds <code>0</code>, <code>1</code>, and <code>2</code> for each condition:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Setting</th><th>Value</th></tr></thead><tbody><tr><td>Train rows</td><td><code>25,348</code></td></tr><tr><td>Validation rows</td><td><code>2,818</code></td></tr><tr><td>Epochs</td><td><code>2</code></td></tr><tr><td>Effective batch size</td><td><code>8</code></td></tr><tr><td>Optimizer steps</td><td><code>6,338</code></td></tr><tr><td>Request shape</td><td><code>batched_datums_pipelined</code></td></tr><tr><td>Warmup steps</td><td><code>190</code></td></tr><tr><td>Schedule</td><td>linear warmup, cosine decay</td></tr><tr><td>Min LR</td><td><code>3e-5</code></td></tr><tr><td>Checkpoint rule</td><td>lowest validation mean NLL; exact ties choose later checkpoint</td></tr></tbody></table>
+<p>Every main run selected the step-<code>3169</code> checkpoint by validation NLL, which was the end of the first epoch and not the final training step.</p>
+<h3 id="45-checkpoint-export">4.5 Checkpoint export</h3>
+<p>Selected training checkpoints were written under Tinker’s training namespace as <code>weights/&lt;run-id&gt;-step-3169</code>. Before any GSM8K evaluation or HuggingFace upload, each selected checkpoint was loaded via <code>load_state_async(...)</code> and re-emitted via <code>save_weights_for_sampler_async(...)</code> to produce a sampler-format weight set as the sampler form was required by the evaluation sampling client. The six adapters published in the <a href="https://huggingface.co/sumitdotml/lora-and-friends">HuggingFace model repo</a> are these sampler-converted exports, and the GSM8K numbers in <a href="#5-results">Results</a> were measured against them rather than against training-state weights.</p>
+<h2 id="5-results">5. Results</h2>
+<p><strong>Figure 1. Primary GSM8K comparison.</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>condition</th><th>target_modules</th><th style="text-align:right">adapter_size_mb</th><th style="text-align:right">seeds</th><th style="text-align:right">mean_accuracy</th><th style="text-align:right">min_accuracy</th><th style="text-align:right">max_accuracy</th><th style="text-align:right">delta_vs_baseline_pp</th><th style="text-align:right">extraction_failures</th><th style="text-align:right">eval_tokens</th></tr></thead><tbody><tr><td>baseline</td><td>n/a</td><td style="text-align:right">n/a</td><td style="text-align:right">1</td><td style="text-align:right">0.8453</td><td style="text-align:right">0.8453</td><td style="text-align:right">0.8453</td><td style="text-align:right">+0.000</td><td style="text-align:right">31</td><td style="text-align:right">505694</td></tr><tr><td>attention_only</td><td>q_proj, k_proj, v_proj, o_proj</td><td style="text-align:right">29.4</td><td style="text-align:right">3</td><td style="text-align:right">0.9055</td><td style="text-align:right">0.9045</td><td style="text-align:right">0.9067</td><td style="text-align:right">+6.015</td><td style="text-align:right">13</td><td style="text-align:right">1077382</td></tr><tr><td>all_layer</td><td>q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj</td><td style="text-align:right">83.5</td><td style="text-align:right">3</td><td style="text-align:right">0.9009</td><td style="text-align:right">0.8992</td><td style="text-align:right">0.9022</td><td style="text-align:right">+5.560</td><td style="text-align:right">17</td><td style="text-align:right">1069860</td></tr></tbody></table>
+<p>The untouched baseline scored <code>1115/1319</code>, or <code>0.8453373768006065</code>. Attention-only LoRA scored <code>1193/1319</code>, <code>1196/1319</code>, and <code>1194/1319</code> across seeds <code>0</code>, <code>1</code>, and <code>2</code> respectively. Meanwhile, all-layer LoRA scored <code>1186/1319</code>, <code>1190/1319</code>, and <code>1189/1319</code> across the respective seeds.</p>
+<p><img src="/personal0website/_astro/fig_03_gsm8k_accuracy_chart.CjTnoPdB_Z1BQOLT.webp" alt="GSM8K accuracy by condition for the untouched baseline, attention-only LoRA, and all-layer LoRA." loading="lazy" decoding="async" fetchpriority="auto" width="1820" height="1187"></p>
+<p><em>Figure 2. GSM8K accuracy by condition on the 1,319-example test set. The large markers show condition means; small markers show individual seeds. No statistical confidence interval is shown.</em></p>
+<p>The attention-only range, <code>0.9045</code> to <code>0.9067</code>, sits above the all-layer range, <code>0.8992</code> to <code>0.9022</code>, in this retained run set. This non-overlap is descriptive evidence and does not remove the <code>N=3</code> limitation or the frozen inconclusive-band rule.</p>
+<h2 id="6-diagnostics">6. Diagnostics</h2>
+<p>Validation NLL and GSM8K accuracy did not measure the same thing; validation NLL selected checkpoints from the SFT validation set, while GSM8K accuracy measured exact boxed-answer correctness on a held-out benchmark.</p>
+<p><img src="/personal0website/_astro/fig_05_validation_nll_diagnostic.pUHefRY0_2aPbOO.webp" alt="Validation negative log-likelihood over training for both LoRA conditions." loading="lazy" decoding="async" fetchpriority="auto" width="1911" height="1158"></p>
+<p><em>Figure 3. Validation negative log-likelihood (NLL) over training. Both conditions selected step <code>3169</code>; attention-only had mean validation NLL <code>0.336295</code> at that step, and all-layer had <code>0.336339</code>.</em></p>
+<p>All six main runs selected the step-<code>3169</code> checkpoint under the lowest-mean-validation-NLL rule. Step <code>3169</code> is the end of the first epoch under the frozen schedule. The per-seed selected NLLs were <code>0.336164</code>, <code>0.336212</code>, and <code>0.336510</code> for <code>attention_only</code> seeds <code>0</code>, <code>1</code>, and <code>2</code>, and <code>0.336119</code>, <code>0.336556</code>, and <code>0.336341</code> for <code>all_layer</code> seeds <code>0</code>, <code>1</code>, and <code>2</code>.</p>
+<p>After step <code>3169</code>, attention-only validation NLL stayed close to its minimum, while all-layer validation NLL rose more sharply. At step <code>4000</code>, the attention-only condition mean was <code>0.338719</code>, while the all-layer condition mean was <code>0.345773</code>. That divergence is consistent with the higher-capacity adapter overfitting faster on this dataset size, but this experiment treats it as a diagnostic shape rather than as proof of a mechanism.</p>
+<p><img src="/personal0website/_astro/fig_06_lr_selection.BQgPA-O2_Z1fPPjL.webp" alt="Learning-rate selection validation NLL across the small LR grid." loading="lazy" decoding="async" fetchpriority="auto" width="1820" height="1160"></p>
+<p><em>Figure 4. LR-selection validation NLL on the small slice. Both conditions selected <code>3e-4</code>; attention-only was flatter between <code>3e-4</code> and <code>1e-3</code>, while all-layer rose more at <code>1e-3</code>.</em></p>
+<p>The LR-selection sweep that was conducted before the main training run also hinted that the higher-capacity adapter was more sensitive to LR in this small slice. Attention-only moved from <code>0.3632619345728878</code> at <code>3e-4</code> to <code>0.3644437038722405</code> at <code>1e-3</code>. All-layer moved from <code>0.3559855057286731</code> at <code>3e-4</code> to <code>0.37397296784836664</code> at <code>1e-3</code>.</p>
+<p><img src="/personal0website/_astro/fig_04_paired_seed_slope.ClcugjqE_ZovFPs.webp" alt="Per-seed prediction disagreement counts between attention-only and all-layer LoRA." loading="lazy" decoding="async" fetchpriority="auto" width="2511" height="1253"></p>
+<p><em>Figure 5. Per-seed disagreement on GSM8K. Each panel counts examples where attention-only is correct and all-layer is wrong, and the reverse.</em></p>
+<p>The disagreement view shows that the mean gap did not come from one seed alone. Attention-only won more one-sided disagreements in each paired seed: <code>+7</code>, <code>+6</code>, and <code>+5</code> examples for seeds <code>0</code>, <code>1</code>, and <code>2</code>.</p>
+<h2 id="7-cost-and-operational-notes">7. Cost And Operational Notes</h2>
+<p><strong>Figure 6. Token and adapter-size accounting.</strong></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>condition</th><th style="text-align:right">adapter_size_mb</th><th style="text-align:right">train_tokens_per_run</th><th style="text-align:right">validation_tokens_per_run</th><th style="text-align:right">eval_tokens_per_run</th><th style="text-align:right">mean_accuracy</th><th style="text-align:right">extraction_failures</th></tr></thead><tbody><tr><td>baseline</td><td style="text-align:right">n/a</td><td style="text-align:right">n/a</td><td style="text-align:right">n/a</td><td style="text-align:right">505,694</td><td style="text-align:right">0.8453</td><td style="text-align:right">31</td></tr><tr><td>attention_only</td><td style="text-align:right">29.4</td><td style="text-align:right">17,227,430</td><td style="text-align:right">6,556,081</td><td style="text-align:right">359,127</td><td style="text-align:right">0.9055</td><td style="text-align:right">13</td></tr><tr><td>all_layer</td><td style="text-align:right">83.5</td><td style="text-align:right">17,227,430</td><td style="text-align:right">6,556,081</td><td style="text-align:right">356,620</td><td style="text-align:right">0.9009</td><td style="text-align:right">17</td></tr></tbody></table>
+<p>The training-side token counts were identical across conditions because the dataset and schedule were fixed. The <code>adapter_size_mb</code> values are retained rounded reporting values. On the HuggingFace model repo main branch, the attention-only <code>adapter_model.safetensors</code> files are <code>30,709,160</code> bytes each, and the all-layer files are <code>87,360,552</code> bytes each.</p>
+<p>I had also conducted a throughput probe experiment, which can be further explored in <a href="#c-throughput-probe">Appendix C</a>. This provides operational context and explains why the main run used <code>batched_datums_pipelined</code>, while keeping the same nominal effective batch size of <code>8</code>. It does not indicate a model-quality result.</p>
+<h2 id="8-limitations">8. Limitations</h2>
+<p>This is a scoped empirical case study and not a broad LoRA target-module law. Below, as per my understanding of the project, are some of this experiment’s limitations:</p>
+<ul>
+<li>GSM8K is a single benchmark. It is useful for grade-school math word problems, but it does not cover all math reasoning behavior.</li>
+<li>Each LoRA condition has only <code>N=3</code> seeds. The observed ranges do not overlap, but that does not support a statistical significance claim here.</li>
+<li>The setup uses one base model, one dataset recipe, one rank, one backend training path, and one selected LR per condition. Different ranks, datasets, optimizers, models, or answer-extraction contracts could change the result.</li>
+<li>Tinker owned some backend LoRA details during training. The local runner controlled rank and layer-family switches, but it did not set <code>lora_alpha</code> or <code>lora_dropout</code>; those values are visible only in the exported adapter configs.</li>
+<li>The exported HuggingFace adapter configs use PEFT’s saved config format. The public directories are organized by the experimental conditions used in this study, while the exported config files themselves use PEFT’s generic <code>target_modules</code> representation.</li>
+</ul>
+<h2 id="9-reproducibility">9. Reproducibility</h2>
+<p>A companion worklog gives the longer story behind this report, including the early false starts, dataset cleanup, training runs, evaluation, and figures: <a href="/blog/lora-target-module-worklog">LoRA Target-Module Worklog</a>.</p>
+<p>The public HuggingFace artifacts are:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Purpose</th><th>URL</th></tr></thead><tbody><tr><td>Selected LoRA adapter exports</td><td><a href="https://huggingface.co/sumitdotml/lora-and-friends">HuggingFace model repo</a></td></tr><tr><td>Frozen raw and rendered dataset</td><td><a href="https://huggingface.co/datasets/sumitdotml/lora-and-friends-dataset">HuggingFace dataset repo</a></td></tr></tbody></table>
+<p>The experiment code and retained source-of-truth artifacts live in the project’s <a href="https://github.com/sumitdotml/lora-and-friends">GitHub repository</a>. Third-party dataset, model, and backend notices are tracked in the repository’s <a href="https://github.com/sumitdotml/lora-and-friends/blob/main/THIRD_PARTY_NOTICES.md">third-party notices file</a>:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Purpose</th><th>URL</th></tr></thead><tbody><tr><td>Baseline GSM8K result</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/artifacts/results/baseline-qwen3-8b-gsm8k-001/summary.json"><code>artifacts/results/baseline-qwen3-8b-gsm8k-001/summary.json</code></a></td></tr><tr><td>Main training runs (six <code>main-001-&lt;condition&gt;-seed-&lt;seed&gt;/</code> directories)</td><td><a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/results"><code>artifacts/results/</code></a></td></tr><tr><td>Selected-checkpoint GSM8K evals (six <code>checkpoint-...-gsm8k-...</code> directories)</td><td><a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/results"><code>artifacts/results/</code></a></td></tr><tr><td>Dataset manifest</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/artifacts/raw_datasets/openmath_original_clean/manifest.json"><code>artifacts/raw_datasets/openmath_original_clean/manifest.json</code></a></td></tr><tr><td>Rendered dataset directory</td><td><a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/rendered_datasets/openmath_original_clean_qwen3_disable_thinking"><code>artifacts/rendered_datasets/openmath_original_clean_qwen3_disable_thinking/</code></a></td></tr><tr><td>Contamination report</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/artifacts/audits/contamination_check/report.json"><code>artifacts/audits/contamination_check/report.json</code></a></td></tr><tr><td>Frozen eval contract</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/docs/freeze/eval_contract.md"><code>docs/freeze/eval_contract.md</code></a></td></tr><tr><td>Frozen LoRA defaults</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/docs/freeze/lora_defaults.md"><code>docs/freeze/lora_defaults.md</code></a></td></tr><tr><td>Frozen run protocol</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/docs/freeze/run_protocol.md"><code>docs/freeze/run_protocol.md</code></a></td></tr><tr><td>Figure provenance (<code>fig_*/fig_*.provenance.json</code> under each figure directory)</td><td><a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/figures"><code>artifacts/figures/</code></a></td></tr><tr><td>Main training script</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/training/run_main_training.py"><code>training/run_main_training.py</code></a></td></tr></tbody></table>
+<p>The HuggingFace model repo main branch contains six selected adapter exports under <code>checkpoints/best-checkpoints/</code>, split by condition, seed, and step. The HuggingFace dataset repo contains both the raw rows and the rendered <code>Qwen3-8B</code> chat-template rows used for training.</p>
+<p>The retained main-run command is:</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">uv</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> run</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> training/run_main_training.py</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --run-prefix</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> main-001</span></span></code></pre>
+<p>The frozen protocol expanded that command across two conditions and three seeds. The final comparison did not pick the best seed. It evaluated each selected checkpoint on GSM8K and reduced each condition by the mean across the three seeds.</p>
+<h2 id="10-conclusion">10. Conclusion</h2>
+<p>Under this exact <code>Qwen3-8B</code> math SFT setup, attention-only LoRA produced the higher GSM8K mean and won more paired disagreements at every seed. The gap was small, <code>0.455</code> percentage points, and stayed below the prewritten <code>0.01</code> winner threshold.</p>
+<p>Therefore, I would keep the conclusion local to this experiment. Attention-only LoRA was smaller and slightly ahead here, but that does not mean it will always be the best option. The answer likely changes with the model, the data, and what the fine-tune is meant to improve. This points to a useful follow-up question: when are narrow adapters enough, and when is broader adaptation worth the extra size? I naturally see this as a promising research direction beyond the scope of this first experiment.</p>
+<h2 id="acknowledgments">Acknowledgments</h2>
+<p>I thank Thinking Machines Lab for providing Tinker credits that supported the training and evaluation runs in this experiment.</p>
+<h2 id="references">References</h2>
+<div class="reference" id="ref-lora"> <span class="ref-authors">Hu, E. J., Shen, Y., Wallis, P., Allen-Zhu, Z., Li, Y., Wang, S., Wang, L., and Chen, W.</span> <span class="ref-year">(2021).</span> <a href="https://arxiv.org/abs/2106.09685" class="ref-title" target="_blank" rel="noopener">LoRA: Low-Rank Adaptation of Large Language Models</a>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:2106.09685</em> </span> </div>
+<div class="reference" id="ref-gsm8k"> <span class="ref-authors">Cobbe, K., Kosaraju, V., Bavarian, M., Chen, M., Jun, H., Kaiser, L., Plappert, M., Tworek, J., Hilton, J., Nakano, R., Hesse, C., and Schulman, J.</span> <span class="ref-year">(2021).</span> <a href="https://arxiv.org/abs/2110.14168" class="ref-title" target="_blank" rel="noopener">Training Verifiers to Solve Math Word Problems</a>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:2110.14168</em> </span> </div>
+<div class="reference" id="ref-qwen3"> <span class="ref-authors">Yang, A., Li, A., Yang, B., Zhang, B., Hui, B., Zheng, B., Yu, B., Gao, C., Huang, C., Lv, C., and others</span> <span class="ref-year">(2025).</span> <a href="https://arxiv.org/abs/2505.09388" class="ref-title" target="_blank" rel="noopener">Qwen3 Technical Report</a>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:2505.09388</em> </span> </div>
+<div class="reference" id="ref-openmathinstruct2"> <span class="ref-authors">Toshniwal, S., Du, W., Moshkov, I., Kisacanin, B., Ayrapetyan, A., and Gitman, I.</span> <span class="ref-year">(2024).</span> <a href="https://arxiv.org/abs/2410.01560" class="ref-title" target="_blank" rel="noopener">OpenMathInstruct-2: Accelerating AI for Math with Massive Open-Source Instruction Data</a>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:2410.01560</em> </span> </div>
+<div class="reference" id="ref-lora-without-regret"> <span class="ref-authors">Schulman, J., and Thinking Machines Lab</span> <span class="ref-year">(2025).</span> <a href="https://thinkingmachines.ai/blog/lora/" class="ref-title" target="_blank" rel="noopener">LoRA Without Regret</a>.
+<span class="ref-venue"> <em>Thinking Machines Lab Blog</em>.
+</span> </div>
+<h2 id="appendix">Appendix</h2>
+<h3 id="a-full-disagreement-table">A. Full Disagreement Table</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th style="text-align:right">Seed</th><th style="text-align:right">Attn correct, All-layer wrong</th><th style="text-align:right">All-layer correct, Attn wrong</th><th style="text-align:right">Delta (Attn - All)</th><th style="text-align:right">Both correct</th><th style="text-align:right">Both wrong</th></tr></thead><tbody><tr><td style="text-align:right">0</td><td style="text-align:right">54</td><td style="text-align:right">47</td><td style="text-align:right">+7</td><td style="text-align:right">1139</td><td style="text-align:right">79</td></tr><tr><td style="text-align:right">1</td><td style="text-align:right">49</td><td style="text-align:right">43</td><td style="text-align:right">+6</td><td style="text-align:right">1147</td><td style="text-align:right">80</td></tr><tr><td style="text-align:right">2</td><td style="text-align:right">46</td><td style="text-align:right">41</td><td style="text-align:right">+5</td><td style="text-align:right">1148</td><td style="text-align:right">84</td></tr></tbody></table>
+<p>Each row sums to <code>1,319</code> examples.</p>
+<h3 id="b-disagreement-examples">B. Disagreement Examples</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th style="text-align:right">Seed</th><th>Direction</th><th style="text-align:right">Benchmark index</th><th style="text-align:right">Reference</th><th style="text-align:right">Attention-only extracted answer</th><th style="text-align:right">All-layer extracted answer</th></tr></thead><tbody><tr><td style="text-align:right">0</td><td>attention-only correct</td><td style="text-align:right">18</td><td style="text-align:right">7</td><td style="text-align:right">7</td><td style="text-align:right">21</td></tr><tr><td style="text-align:right">0</td><td>all-layer correct</td><td style="text-align:right">2</td><td style="text-align:right">70000</td><td style="text-align:right">195000</td><td style="text-align:right">70000</td></tr><tr><td style="text-align:right">1</td><td>attention-only correct</td><td style="text-align:right">13</td><td style="text-align:right">18</td><td style="text-align:right">18</td><td style="text-align:right">15</td></tr><tr><td style="text-align:right">1</td><td>all-layer correct</td><td style="text-align:right">39</td><td style="text-align:right">18</td><td style="text-align:right">48</td><td style="text-align:right">18</td></tr><tr><td style="text-align:right">2</td><td>attention-only correct</td><td style="text-align:right">5</td><td style="text-align:right">64</td><td style="text-align:right">64</td><td style="text-align:right">50</td></tr><tr><td style="text-align:right">2</td><td>all-layer correct</td><td style="text-align:right">40</td><td style="text-align:right">8</td><td style="text-align:right">12</td><td style="text-align:right">8</td></tr></tbody></table>
+<p>The lowest-index seed-0 attention-only example asks how many dozens of eggs Claire eats after making a three-egg omelet every morning for four weeks. Attention-only computes <code>84 / 12 = 7</code>; all-layer mistakenly treats <code>84</code> as omelets and multiplies by <code>3</code> again.</p>
+<p>The lowest-index seed-2 all-layer example asks for Brandon’s iPhone age given Suzy’s one-year phone, Ben’s phone at two times Suzy’s age, and Brandon’s at four times Ben’s age. All-layer extracts <code>8</code>; attention-only interprets “two times older” as adding two extra years and extracts <code>12</code>.</p>
+<h3 id="c-throughput-probe">C. Throughput Probe</h3>
+<p><img src="/personal0website/_astro/fig_08_throughput_probe.CqeELwHK_1tclPb.webp" alt="Wall-clock seconds per optimizer step for three Tinker request shapes." loading="lazy" decoding="async" fetchpriority="auto" width="1851" height="1100"></p>
+<p><em>Figure 7. Throughput probe for attention-only LoRA at effective batch size <code>8</code>. Pipelined batching reduced mean step time from <code>20.2</code> seconds to <code>2.4</code> seconds in the retained probe.</em></p>
+<p>The retained probe measured <code>20.22187466151081</code> seconds per optimizer step for sequential single-datum calls, <code>5.201307859155349</code> seconds for batched datums, and <code>2.4104866901249693</code> seconds for batched pipelined datums.</p>
+<h3 id="d-source-map-notes">D. Source Map Notes</h3>
+<p>The public numbers in this article were checked against retained artifacts during drafting. Each source below resolves under the project repository at <a href="https://github.com/sumitdotml/lora-and-friends">github.com/sumitdotml/lora-and-friends</a> or the linked HuggingFace repo:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Claim family</th><th>Source</th></tr></thead><tbody><tr><td>Baseline accuracy, extraction failures, and eval tokens</td><td><a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/results/baseline-qwen3-8b-gsm8k-001"><code>artifacts/results/baseline-qwen3-8b-gsm8k-001/</code></a> (<code>summary.json</code> and <code>metrics.jsonl</code>)</td></tr><tr><td>Per-seed LoRA GSM8K accuracies</td><td>Six <code>checkpoint-...-gsm8k-...</code> directories under <a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/results"><code>artifacts/results/</code></a></td></tr><tr><td>Training validation NLL and selected step</td><td>Six <code>main-001-&lt;condition&gt;-seed-&lt;seed&gt;/</code> directories under <a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/results"><code>artifacts/results/</code></a></td></tr><tr><td>Dataset rows, split rule, source counts</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/artifacts/raw_datasets/openmath_original_clean/manifest.json"><code>artifacts/raw_datasets/openmath_original_clean/manifest.json</code></a></td></tr><tr><td>Rendered dataset rows and system prompt</td><td><a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/rendered_datasets/openmath_original_clean_qwen3_disable_thinking"><code>artifacts/rendered_datasets/openmath_original_clean_qwen3_disable_thinking/</code></a></td></tr><tr><td>Contamination and train/val overlap gates</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/artifacts/audits/contamination_check/report.json"><code>artifacts/audits/contamination_check/report.json</code></a></td></tr><tr><td>LR selection, run protocol, null-result rule</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/docs/freeze/run_protocol.md"><code>docs/freeze/run_protocol.md</code></a></td></tr><tr><td>Target modules and backend-owned LoRA fields</td><td><a href="https://github.com/sumitdotml/lora-and-friends/blob/main/docs/freeze/lora_defaults.md"><code>docs/freeze/lora_defaults.md</code></a></td></tr><tr><td>Figure captions and derived tables</td><td>Per-figure subdirectories under <a href="https://github.com/sumitdotml/lora-and-friends/tree/main/artifacts/figures"><code>artifacts/figures/</code></a> (<code>fig_*.md</code> and <code>fig_*.data.csv</code>)</td></tr><tr><td>Public adapter files and model-card README</td><td><a href="https://huggingface.co/sumitdotml/lora-and-friends">HuggingFace model repo</a></td></tr><tr><td>Public dataset files and dataset-card README</td><td><a href="https://huggingface.co/datasets/sumitdotml/lora-and-friends-dataset">HuggingFace dataset repo</a></td></tr></tbody></table>  </main> <footer class="research-footer"> <a href="/research">Back to Research</a> <span class="separator">|</span> <a href="/">herambve</a> </footer> </article> <script type="module">const e=document.querySelector(".revision-toggle"),i=document.getElementById("revision-history");e&&i&&e.addEventListener("click",()=>{const t=e.getAttribute("aria-expanded")==="true";e.setAttribute("aria-expanded",(!t).toString()),i.hidden=t});</script> <span class="view-tracker" data-slug="research/lora-and-friends" data-worker-url data-worker-api-key style="display:none" data-astro-cid-e75zxctz></span><script type="module">const p=()=>{const{hostname:w,port:e}=window.location;if(!w)return!1;const t=w.toLowerCase();return!!(["localhost","127.0.0.1","0.0.0.0","[::1]"].includes(t)||t.endsWith(".local")||t.includes("localhost")||e&&e!=="80"&&e!=="443")};async function v(){document.querySelectorAll(".view-counter").forEach(async e=>{const t=e.getAttribute("data-slug"),l=e.getAttribute("data-worker-url"),g=e.getAttribute("data-read-only")==="true",y=e.getAttribute("data-worker-api-key")||"",i=e.querySelector(".view-count-number");if(!t||!l||!i)return;if(p()){i.textContent="-- reads (dev)",e.classList.add("loaded");return}const r=t,u=`viewed_${r}`,s=`view_display_failed_${r}`,a=localStorage.getItem(u),c=Number(localStorage.getItem(s)),n=Date.now(),o=1440*60*1e3,d=300*1e3,f=!g&&(!a||n-parseInt(a)>o);try{const S=f?"POST":"GET",m=await fetch(`${l}/views/${r}`,{method:S,headers:{"Content-Type":"application/json",...y?{"X-Worker-Api-Key":y}:{}}});if(!m.ok){(!Number.isFinite(c)||n-c>d)&&(console.warn(`View count fetch failed for ${r}: ${m.status}`),localStorage.setItem(s,n.toString()));return}const h=await m.json();if(f&&localStorage.setItem(u,n.toString()),localStorage.removeItem(s),h.views===0){e instanceof HTMLElement&&(e.style.display="none");return}const b=new Intl.NumberFormat("en-US").format(h.views),A=h.views===1?"read":"reads";i.textContent=`${b} ${A}`,e.classList.add("loaded")}catch(S){(!Number.isFinite(c)||n-c>d)&&(console.error("Error tracking views:",S),localStorage.setItem(s,n.toString()))}})}async function k(){document.querySelectorAll(".view-tracker").forEach(async e=>{const t=e.getAttribute("data-slug"),l=e.getAttribute("data-worker-url"),g=e.getAttribute("data-worker-api-key")||"";if(!t||!l||p()||Array.from(document.querySelectorAll(".view-counter")).some(o=>{const d=o.getAttribute("data-slug"),f=o.getAttribute("data-read-only")==="true";return d===t&&!f}))return;const i=`viewed_${t}`,r=`view_failed_${t}`,u=localStorage.getItem(i),s=Number(localStorage.getItem(r)),a=Date.now(),c=1440*60*1e3,n=300*1e3;if(!u||a-parseInt(u)>c)try{const o=await fetch(`${l}/views/${t}`,{method:"POST",headers:{"Content-Type":"application/json",...g?{"X-Worker-Api-Key":g}:{}}});o.ok?(localStorage.setItem(i,a.toString()),localStorage.removeItem(r)):(!Number.isFinite(s)||a-s>n)&&(console.warn(`View tracking failed for ${t}: ${o.status}`),localStorage.setItem(r,a.toString()))}catch(o){console.error("Error tracking view:",o)}})}v();k();document.addEventListener("astro:page-load",v);document.addEventListener("astro:page-load",k);</script> </body></html>

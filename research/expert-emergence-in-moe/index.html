@@ -1,0 +1,302 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" type="image/png" href="/favicon.png"><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet"><link rel="canonical" href="https://herambve.github.io/personal0website/research/expert-emergence-in-moe/"><title>Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose</title><meta name="description" content="Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose"><!-- OG --><meta property="og:type" content="article"><meta property="og:url" content="https://herambve.github.io/personal0website/research/expert-emergence-in-moe/"><meta property="og:title" content="Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose"><meta property="og:description" content="Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose"><meta property="og:image" content="https://herambve.github.io/personal0website/_astro/training_curves.BE67ecyC.png"><!-- Twitter --><meta property="twitter:card" content="summary_large_image"><meta property="twitter:url" content="https://herambve.github.io/personal0website/research/expert-emergence-in-moe/"><meta property="twitter:title" content="Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose"><meta property="twitter:description" content="Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose"><meta property="twitter:image" content="https://herambve.github.io/personal0website/_astro/training_curves.BE67ecyC.png"><script>
+	(function initializeTheme() {
+		try {
+			const stored =
+				typeof localStorage !== "undefined"
+					? localStorage.getItem("theme")
+					: null;
+			const prefersDark =
+				typeof window !== "undefined" &&
+				window.matchMedia &&
+				window.matchMedia("(prefers-color-scheme: dark)").matches;
+			const theme = stored ?? (prefersDark ? "dark" : "light");
+			document.documentElement.setAttribute("data-theme", theme);
+		} catch (error) {
+			console.error("Theme initialization failed:", error);
+		}
+	})();
+</script><link rel="stylesheet" href="/personal0website/_astro/_slug_.BDaMrAFG.css">
+<style>button[data-astro-cid-x3pjskd3]{font:inherit;background:none;border:none;cursor:pointer;padding:0;color:var(--text-color);display:flex;align-items:center;justify-content:center;position:relative;transition:color .2s ease;margin:0;width:2.2em;height:2.2em}button[data-astro-cid-x3pjskd3]:hover{color:var(--accent-purple)}.icon[data-astro-cid-x3pjskd3]{width:1.375em;height:1.375em}.sun-icon[data-astro-cid-x3pjskd3],.moon-icon[data-astro-cid-x3pjskd3]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}[data-theme=light] .sun-icon[data-astro-cid-x3pjskd3],[data-theme=dark] .moon-icon[data-astro-cid-x3pjskd3]{display:none}
+.view-counter[data-astro-cid-e75zxctz]{display:none;align-items:baseline;gap:.75em;font-size:.9em;color:var(--text-color-muted);font-weight:var(--font-weight-regular)}.view-counter[data-astro-cid-e75zxctz].loaded{display:inline-flex}.view-separator[data-astro-cid-e75zxctz]{user-select:none}.view-count[data-astro-cid-e75zxctz]{display:inline-flex;align-items:baseline}.view-count-number[data-astro-cid-e75zxctz]{font-variant-numeric:tabular-nums}@media(max-width:720px){.view-counter[data-astro-cid-e75zxctz]{font-size:.85em}}@media(max-width:480px){.view-counter[data-astro-cid-e75zxctz]{font-size:.8em}}
+</style></head> <body> <div class="research-theme-toggle"> <button class="theme-toggle" aria-label="Toggle theme" data-astro-cid-x3pjskd3> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="22" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" data-astro-cid-x3pjskd3="true" class="lucide lucide-sun sun-icon icon">  <circle cx="12" cy="12" r="4"></circle> <path d="M12 2v2"></path> <path d="M12 20v2"></path> <path d="m4.93 4.93 1.41 1.41"></path> <path d="m17.66 17.66 1.41 1.41"></path> <path d="M2 12h2"></path> <path d="M20 12h2"></path> <path d="m6.34 17.66-1.41 1.41"></path> <path d="m19.07 4.93-1.41 1.41"></path>  </svg> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="22" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" data-astro-cid-x3pjskd3="true" class="lucide lucide-moon moon-icon icon">  <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path>  </svg> </button>  <script type="module">const m=document.querySelectorAll(".theme-toggle");m.forEach(t=>{t.addEventListener("click",()=>{const e=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",e),localStorage.setItem("theme",e)})});</script> </div> <article class="research"> <header class="research-header"> <h1 class="research-title">Expert Emergence in a Small Sparse MoE Transformer Trained on Code, Math, and Prose</h1> <div class="research-authors"> <span class="author"> <span class="author-name">sumitdotml</span> <span class="author-affiliation"> Independent </span> <span class="author-email">vengurlekarheramb19@gmail.com</span> </span>  </div> <div class="research-date-container"> <time class="research-date" datetime="2026-02-27T00:00:00.000Z"> 27 Feb 2026 </time> </div>  <div class="research-links"> <a href="https://github.com/sumitdotml/moe-emergence" target="_blank" rel="noopener noreferrer" class="research-link"> <img src="/personal0website/icons/github.svg" alt="" width="16" height="16" aria-hidden="true"> <span>Code</span> </a> <a href="https://huggingface.co/sumitdotml/moe-emergence" target="_blank" rel="noopener noreferrer" class="research-link"> <img src="/personal0website/icons/huggingface.svg" alt="" width="18" height="18" aria-hidden="true"> <span>Models</span> </a> <a href="https://wandb.ai/sumit-ml/moe-emergence" target="_blank" rel="noopener noreferrer" class="research-link"> <img src="/personal0website/icons/wandb.svg" alt="" width="18" height="18" aria-hidden="true"> <span>Training Logs</span> </a>  </div> </header> <section class="abstract">  <p class="keywords"> <strong>Keywords:</strong> mixture of experts, expert specialization, sparse transformers, routing, load balancing </p> </section> <main class="research-content">  <h2 id="tldr">TL;DR</h2>
+<p>I trained a GPT-2-based MoE model on three domains (code, math, prose) to see whether experts develop routing preferences, and they do! The MoE model beats a dense baseline by 3.6% on aggregate eval loss, with math seeing the largest gain (14%) and prose the only regression (1.6%). Removing the load balancing loss causes full expert collapse within 500 training steps. Top-2 routing provides a negligible 0.14% improvement over top-1, confirming that a single active expert per token captures most of the benefit.</p>
+<h2 id="1-motivation">1. Motivation</h2>
+<p>Mixture-of-Experts (MoE) models route each token to a subset of “expert” feed-forward networks instead of passing everything through one shared FFN. Different experts learn different things, and the router learns which expert to call for which input. This goes back to <span class="cite">
+(<a href="#ref-jacobs1991">Jacobs et al., 1991</a>)
+</span> and has been scaled up in modern Transformers by <span class="cite">
+(<a href="#ref-shazeer2017">Shazeer et al., 2017</a>)
+</span> and <span class="cite">
+(<a href="#ref-fedus2022">Fedus et al., 2022</a>)
+</span>.</p>
+<p>I wanted to see this happen from scratch, at small scale, with interpretable domains. If I train a GPT-2-sized MoE on code, math, and prose, will the experts specialize by domain? Will expert 3 end up handling math while expert 7 handles code? Or will the routing stay diffuse?</p>
+<p>This project is pedagogical, not competitive. The goal is a trained sparse Transformer with visualizations showing routing patterns, entropy curves, and expert affinity heatmaps. Not SOTA perplexity.</p>
+<h2 id="2-architecture">2. Architecture</h2>
+<h3 id="base-model">Base Model</h3>
+<p>I started from GPT-2 small <span class="cite">
+(<a href="#ref-radford2019">Radford et al., 2019</a>)
+</span> (124M parameters, 12 Transformer layers). The last 4 layers (8 through 11) have their feed-forward networks replaced with MoE layers, each containing 8 experts with top-1 routing. The earlier layers (0 through 7) stay dense because they handle general linguistic features that don’t need domain-specific routing.</p>
+<h3 id="moe-layer-design">MoE Layer Design</h3>
+<p>Each MoE layer replaces the original <code>MLP</code> block. I used a learned linear projection from the hidden dimension to the number of experts as the router:</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="python"><code><span class="line"><span style="--shiki-light:#7C7F93;--shiki-light-font-style:italic;--shiki-dark:#9399B2;--shiki-dark-font-style:italic"># router: [batch * seq_len, d_model] -&gt; [batch * seq_len, n_experts]</span></span>
+<span class="line"><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">router_logits </span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=</span><span style="--shiki-light:#D20F39;--shiki-light-font-style:italic;--shiki-dark:#F38BA8;--shiki-dark-font-style:italic"> self</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">.</span><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">router</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">(</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">hidden_states</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">)</span><span style="--shiki-light:#7C7F93;--shiki-light-font-style:italic;--shiki-dark:#9399B2;--shiki-dark-font-style:italic">  # shape: [B*S, 8]</span></span>
+<span class="line"><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">router_probs </span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> F</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">.</span><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">softmax</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">(</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">router_logits</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">,</span><span style="--shiki-light:#E64553;--shiki-light-font-style:italic;--shiki-dark:#EBA0AC;--shiki-dark-font-style:italic"> dim</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=-</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387">1</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">)</span></span>
+<span class="line"><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">topk_weights</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">,</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> topk_indices </span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> torch</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">.</span><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">topk</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">(</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">router_probs</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">,</span><span style="--shiki-light:#E64553;--shiki-light-font-style:italic;--shiki-dark:#EBA0AC;--shiki-dark-font-style:italic"> k</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387">1</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">,</span><span style="--shiki-light:#E64553;--shiki-light-font-style:italic;--shiki-dark:#EBA0AC;--shiki-dark-font-style:italic"> dim</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=-</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387">1</span><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">)</span></span></code></pre>
+<p>For top-1 routing, each token is dispatched to exactly one expert. The forward pass uses the hard assignment (weight = 1.0), but gradients flow through the soft probability via a straight-through estimator <span class="cite">
+(<a href="#ref-bengio2013">Bengio et al., 2013</a>)
+</span>. This lets the router learn from the loss signal even though the forward is discrete.</p>
+<h3 id="expert-initialization">Expert Initialization</h3>
+<p>I initialized each expert as a <code>deepcopy</code> of the original pretrained MLP, plus a small amount of Gaussian noise (<code>std=0.01</code>). The model begins training with 8 copies of a working FFN rather than 8 random networks, which avoids the cold-start problem of learning from scratch. The noise breaks symmetry so experts can diverge during training.</p>
+<h3 id="auxiliary-losses">Auxiliary Losses</h3>
+<p>Two auxiliary losses prevent degenerate routing:</p>
+<ol>
+<li>
+<p><strong>Load balancing loss</strong> <span class="cite">
+(<a href="#ref-fedus2022">Fedus et al., 2022</a>)
+</span>: penalizes uneven expert utilization. Defined as <code>n_experts * sum(f_i * P_i)</code> where <code>f_i</code> is the fraction of tokens routed to expert <code>i</code> and <code>P_i</code> is the mean router probability for expert <code>i</code>. The minimum value is 1.0 at perfect balance. Coefficient: <code>lb_coef = 0.01</code>.</p>
+</li>
+<li>
+<p><strong>Z-loss</strong> <span class="cite">
+(<a href="#ref-zoph2022">Zoph et al., 2022</a>)
+</span>: stabilizes router logit magnitudes. Defined as <code>mean(logsumexp(router_logits)^2)</code>. Prevents the router from producing extremely confident (or noisy) predictions. Coefficient: <code>z_coef = 0.001</code>.</p>
+</li>
+</ol>
+<p>The total loss is: <code>LM_loss + lb_coef * LB_loss + z_coef * Z_loss</code>.</p>
+<h2 id="3-training-setup">3. Training Setup</h2>
+<h3 id="data">Data</h3>
+<p>Three domains, each capped at 10MB of raw text:</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Domain</th><th>Source</th><th>Description</th></tr></thead><tbody><tr><td>Code</td><td>CodeParrot-clean</td><td>Diverse Python files</td></tr><tr><td>Math</td><td>MathQA <span class="cite">
+(<a href="#ref-amini2019">Amini et al., 2019</a>)
+</span></td><td>Problem + rationale pairs</td></tr><tr><td>Prose</td><td>C4 <span class="cite">
+(<a href="#ref-raffel2020">Raffel et al., 2020</a>)
+</span></td><td>Filtered web text</td></tr></tbody></table>
+<p>Texts are tokenized with the GPT-2 tokenizer, packed into 512-token blocks with domain labels, and token-balanced so each domain contributes equally to training batches. Without balancing, code produces 1.9x more tokens than prose, enough to bias expert routing toward code patterns.</p>
+<p>After balancing: 4,296 blocks per domain, 12,888 total (~6.6M tokens). At 10,000 steps with an effective batch size of 8, the model sees ~6 epochs of the data.</p>
+<h3 id="runs">Runs</h3>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Run</th><th>Mode</th><th>Steps</th><th>Key Change</th></tr></thead><tbody><tr><td>Dense baseline</td><td>Dense GPT-2</td><td>5,000</td><td>No MoE layers</td></tr><tr><td>MoE main</td><td>Top-1, 8 experts</td><td>10,000</td><td>Primary experiment</td></tr><tr><td>No-LB ablation</td><td>Top-1, lb_coef=0</td><td>2,000 (early-stopped at 500)</td><td>Tests necessity of load balancing</td></tr><tr><td>Top-2 directional</td><td>Top-2, 8 experts</td><td>10,000</td><td>Tests whether a second expert helps</td></tr></tbody></table>
+<p>All runs use <code>lr=5e-5</code>, cosine schedule, 10% warmup, <code>batch_size=2</code> with <code>grad_accum=4</code> (effective batch 8). All training ran on a single <a href="https://www.primeintellect.ai/">PrimeIntellect</a> RTX 4090 24GB instance.</p>
+<h2 id="4-results">4. Results</h2>
+<h3 id="dense-vs-moe">Dense vs MoE</h3>
+<p><img src="/personal0website/_astro/training_curves.BE67ecyC_1Rg8y3.webp" alt="Evaluation loss over training for all four runs (left), and per-domain best evaluation loss comparison (right)." loading="lazy" decoding="async" fetchpriority="auto" width="3560" height="1460"></p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Metric</th><th>Dense</th><th>MoE (top-1)</th><th>Delta</th></tr></thead><tbody><tr><td>Eval loss</td><td>2.157</td><td>2.080</td><td>-3.6%</td></tr><tr><td>Code loss</td><td>1.554</td><td>1.521</td><td>-2.1%</td></tr><tr><td>Math loss</td><td>2.023</td><td>1.740</td><td>-14.0%</td></tr><tr><td>Prose loss</td><td>3.485</td><td>3.541</td><td>+1.6%</td></tr><tr><td>Perplexity</td><td>8.64</td><td>7.91</td><td>-8.4%</td></tr></tbody></table>
+<p>The MoE model wins on aggregate loss by 3.6%. Math sees the largest improvement at 14% because its structured problem-rationale format gives experts something concrete to specialize on. Code improves modestly at 2.1%. Prose is the one domain where MoE loses: the dense model beats it by 1.6%.</p>
+<p>C4 web text is heterogeneous: news, forums, recipes, product descriptions, everything. There’s no single “prose pattern” for an expert to latch onto. Math and code have learnable structural regularities; prose, at this scale, does not.</p>
+<blockquote>
+<p>Note: These runs are not step-matched (5,000 dense vs 10,000 MoE), but the dense model had plateaued by step ~3,600, so additional steps would not have closed the gap.</p>
+</blockquote>
+<h3 id="training-dynamics">Training Dynamics</h3>
+<p>The MoE model crossed the dense baseline at step ~3,600 (36% of training). Both models plateaued around step 7,000-8,000, with the MoE eval loss settling at 2.080 and the dense at 2.157. The learning rate had decayed to near-zero by that point (cosine schedule), and the small dataset was fully memorized.</p>
+<p>Load balance stayed healthy throughout the MoE main run: <code>lb_loss</code> started at 1.056 during warmup and settled to 1.011 by step 1,000, holding there for the remaining 9,000 steps. Z-loss converged from 4.3 at step 200 down to 0.99 by step 8,000, indicating the router logits stabilized completely.</p>
+<h2 id="5-expert-specialization">5. Expert Specialization</h2>
+<h3 id="domain-level-routing">Domain-Level Routing</h3>
+<p>The central question: do the experts develop domain preferences?</p>
+<p><img src="/personal0website/_astro/expert_domain_heatmaps.CH3n5z_f_1w73cy.webp" alt="Expert utilization fractions per domain across all four MoE layers. Uniform baseline is 0.125 (1/8 experts). Darker cells indicate higher utilization." loading="lazy" decoding="async" fetchpriority="auto" width="4135" height="3068"></p>
+<p>Yes. The heatmaps show clear specialization patterns, especially in layers 8 and 10. In layer 10, expert 6 receives 0.260 of math tokens (vs the 0.125 uniform baseline), while getting only 0.075 of prose tokens. In layer 8, expert 4 gets 0.242 of math tokens but only 0.078 of code. Layer 8 shows some of the sharpest domain contrasts, while layer 11 stays more diffuse.</p>
+<p>The routing is not perfectly disjoint (no expert handles only one domain), but the preferences are unambiguous. This is what you’d expect: the load balancing loss prevents full monopolization, so experts develop preferences rather than exclusive territories.</p>
+<h3 id="router-entropy">Router Entropy</h3>
+<p><img src="/personal0website/_astro/router_entropy_over_training.CMO4HUe7_ZWk3s0.webp" alt="Per-layer router entropy over 10,000 training steps. Higher entropy means more uniform routing; lower entropy means sharper expert preferences." loading="lazy" decoding="async" fetchpriority="auto" width="2960" height="1460"></p>
+<p>Router entropy starts near the maximum (<code>ln(8) = 2.079</code>, representing uniform routing) and decreases over training as the router learns to make sharper decisions, moving from “send tokens everywhere equally” to “send this token to expert 4 specifically.” The decline is steepest in the first 2,000 steps and plateaus by step 5,000, mirroring the eval loss convergence.</p>
+<p>Layers 9 and 10 show the lowest final entropy, meaning the router makes the sharpest per-token decisions in those layers. Layer 8 retains higher entropy: its router distributes probability more evenly across experts for any given token, even though the aggregate domain-level preferences are strong (as the heatmaps show). Per-token confidence and domain-level preference measure different things.</p>
+<h3 id="token-level-routing">Token-Level Routing</h3>
+<p>Beyond domain-level patterns, I analyzed how the router handles different Python token types within the code domain.</p>
+<p><img src="/personal0website/_astro/token_type_routing_layer9.CxQJmODM_tfn9B.webp" alt="Routing patterns for Python token types (keywords, names, numbers, strings, operators, comments, other) across 8 experts in layer 9." loading="lazy" decoding="async" fetchpriority="auto" width="2828" height="1461"></p>
+<p>The router distinguishes between token types within the same domain. In layer 9, expert 0 handles 0.471 of NUMBER tokens and 0.429 of OP tokens, but only 0.125 of KEYWORDs. Expert 2 handles 0.447 of NAME tokens. The experts develop finer-grained preferences for syntactic roles, not just a coarse “this is code” distinction.</p>
+<p>The analysis uses majority-vote mapping from BPE token spans to Python tokenizer categories, running 200 code samples through the final model and accumulating expert assignments per token type.</p>
+<h2 id="6-ablations">6. Ablations</h2>
+<h3 id="without-load-balancing">Without Load Balancing</h3>
+<p>The no-LB ablation removes the load balancing loss (<code>lb_coef = 0.0</code>) while keeping z-loss on (<code>z_coef = 0.001</code>). Is load balancing necessary, or will the router distribute tokens naturally?</p>
+<p><img src="/personal0website/_astro/collapse_comparison_layer9.BWPDxOH3_hrb9p.webp" alt="Expert utilization with load balancing (left) vs without (right) in layer 9. With LB, all 8 experts share tokens roughly equally. Without LB, a single expert dominates." loading="lazy" decoding="async" fetchpriority="auto" width="2960" height="1184"></p>
+<p>Expert collapse happened fast. The first warning fired at step 100 (expert 5 in layer 11 handling 62.5% of tokens). By step 500, expert 1 in layer 9 had captured 73.6% of all tokens, triggering automatic early stopping.</p>
+<p><img src="/personal0website/_astro/collapse_trajectory_layer9.DrmqBd-4_ZbIe4s.webp" alt="Expert utilization trajectory over steps 100-500 without load balancing. Expert 1 (dominant, bold line) steadily absorbs tokens from other experts." loading="lazy" decoding="async" fetchpriority="auto" width="2958" height="1460"></p>
+<p>The trajectory shows a classic collapse pattern: one expert begins with a slight advantage, the router reinforces that advantage by sending it more tokens, and the positive feedback loop accelerates until a single expert monopolizes the layer.</p>
+<p>The no-LB model actually had <em>lower</em> LM loss than the MoE main run at step 400 (2.378 vs 2.493). Collapsing onto fewer experts can temporarily help optimization because the router doesn’t need to learn distributed specialization. But this comes at the cost of dead experts and lost capacity.</p>
+<p>Z-loss alone does not prevent collapse. It stabilizes the <em>magnitude</em> of router logits but has no mechanism to encourage balanced <em>distribution</em>. Of the two auxiliary losses, only lb_loss prevents collapse.</p>
+<h3 id="top-2-vs-top-1">Top-2 vs Top-1</h3>
+<p>The top-2 run routes each token to two experts with soft-weighted combination, doubling per-token expert compute. The main hypothesis: maybe two experts would help on prose, where top-1 routing struggles.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Metric</th><th>Top-1</th><th>Top-2</th><th>Delta</th></tr></thead><tbody><tr><td>Eval loss</td><td>2.080</td><td>2.077</td><td>-0.14%</td></tr><tr><td>Code loss</td><td>1.521</td><td>1.518</td><td>-0.19%</td></tr><tr><td>Math loss</td><td>1.740</td><td>1.734</td><td>-0.39%</td></tr><tr><td>Prose loss</td><td>3.541</td><td>3.540</td><td>-0.03%</td></tr><tr><td>lb_loss</td><td>1.012</td><td>1.048</td><td>+3.6%</td></tr></tbody></table>
+<p>The improvement is 0.14%, consistent across 50 eval checkpoints but practically negligible. Math sees the largest (still tiny) gain at 0.39%. Prose barely moved at 0.03%.</p>
+<p>This aligns with the Switch Transformer finding <span class="cite">
+(<a href="#ref-fedus2022">Fedus et al., 2022</a>)
+</span>: top-1 routing captures most of the MoE benefit. The additional expert path adds compute without meaningfully improving expressiveness at this scale.</p>
+<h2 id="7-limitations">7. Limitations</h2>
+<p><strong>1.</strong> GPT-2 small with 8 experts is far from production MoE systems like Mixtral <span class="cite">
+(<a href="#ref-jiang2024">Jiang et al., 2024</a>)
+</span> or Switch-C. Specialization patterns at this scale may not transfer to models with hundreds of experts.</p>
+<p><strong>2.</strong> Code, math, and prose are intentionally distinct. A harder test would be closely related domains (e.g., Python vs JavaScript, or algebra vs geometry) where the router needs to make finer distinctions.</p>
+<p><strong>3.</strong> C4 was the wrong dataset for demonstrating prose specialization. I chose it over WikiText-103 to avoid encyclopedic bias (<a href="https://github.com/sumitdotml/moe-emergence/blob/main/docs/decisions/010-dataset-choices.md">decision 010</a>), but C4’s topic distribution (47% general web content, 14.5% commerce, 12% tech, and dozens of smaller categories) is too diffuse for any expert to specialize on. This showed up immediately in training: prose loss barely moved after step 1,000 and the MoE model never caught the dense baseline on this domain. A narrower corpus with structural regularity (literary fiction, scientific abstracts, news articles) would have given the router patterns to exploit, the way MathQA’s problem-rationale format did for math.</p>
+<p><strong>4.</strong> The dense baseline ran for 5,000 steps; MoE runs went to 10,000. The dense model had plateaued, but a perfectly controlled comparison would use identical step counts.</p>
+<p><strong>5.</strong> 10MB per domain, ~6 epochs of training. Larger datasets might reveal different specialization patterns or extend the region where MoE has an advantage.</p>
+<p><strong>6.</strong> Production MoE systems use a capacity factor to limit how many tokens each expert handles per batch, preventing overflow. I skipped this since the dataset is small enough that overflow wasn’t a practical issue.</p>
+<h2 id="8-conclusion">8. Conclusion</h2>
+<p>Expert specialization emerges reliably at small scale when the training data has domain structure. The MoE model’s 14% improvement on math shows that structured, pattern-rich domains benefit most from expert routing. Prose — heterogeneous web text with no dominant structure — doesn’t benefit, and actually regresses slightly.</p>
+<p>The load balancing loss is essential. Without it, expert collapse happens within hundreds of steps, and z-loss alone doesn’t help. Top-1 routing is sufficient: a second expert per token doubles the compute without moving the loss.</p>
+<p>All training artifacts (checkpoints, metrics, W&amp;B logs) and the analysis code are available in the <a href="https://github.com/sumitdotml/moe-emergence">project repository</a>. Models are on <a href="https://huggingface.co/sumitdotml/moe-emergence">HuggingFace</a>.</p>
+<h2 id="references">References</h2>
+<div class="reference" id="ref-jacobs1991"> <span class="ref-authors">Jacobs, R. A., Jordan, M. I., Nowlan, S. J., and Hinton, G. E.</span> <span class="ref-year">(1991).</span> <a href="https://doi.org/10.1162/neco.1991.3.1.79" class="ref-title" target="_blank" rel="noopener">Adaptive mixtures of local experts</a>.
+<span class="ref-venue"> <em>Neural Computation</em>, 3(1), 79-87.
+</span> </div>
+<div class="reference" id="ref-shazeer2017"> <span class="ref-authors">Shazeer, N., Mirhoseini, A., Maziarz, K., Davis, A., Le, Q., Hinton, G., and Dean, J.</span> <span class="ref-year">(2017).</span> <span class="ref-title">Outrageously large neural networks: The sparsely-gated mixture-of-experts layer</span>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:1701.06538</em> </span> </div>
+<div class="reference" id="ref-fedus2022"> <span class="ref-authors">Fedus, W., Zoph, B., and Shazeer, N.</span> <span class="ref-year">(2022).</span> <a href="https://jmlr.org/papers/v23/21-0998.html" class="ref-title" target="_blank" rel="noopener">Switch Transformers: Scaling to trillion parameter models with simple and efficient sparsity</a>.
+<span class="ref-venue"> <em>Journal of Machine Learning Research</em>, 23(120), 1-39.
+</span> </div>
+<div class="reference" id="ref-zoph2022"> <span class="ref-authors">Zoph, B., Bello, I., Kumar, S., Du, N., Huang, Y., Dean, J., Shazeer, N., and Fedus, W.</span> <span class="ref-year">(2022).</span> <span class="ref-title">ST-MoE: Designing stable and transferable sparse expert models</span>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:2202.08906</em> </span> </div>
+<div class="reference" id="ref-jiang2024"> <span class="ref-authors">Jiang, A. Q., Sablayrolles, A., Roux, A., Mensch, A., Savary, B., Bamford, C., Chaplot, D. S., de las Casas, D., Hanna, E. B., Bressand, F., Lenber, G., Bour, G., Lample, G., Lavaud, L. R., Saulnier, L., Lachaux, M.-A., Stock, P., Subramanian, S., Yang, S., Antoniak, S., Le Scao, T., Gerber, T., Vayer, T., Roux, T., Lavril, T., and El Sayed, W.</span> <span class="ref-year">(2024).</span> <span class="ref-title">Mixtral of Experts</span>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:2401.04088</em> </span> </div>
+<div class="reference" id="ref-radford2019"> <span class="ref-authors">Radford, A., Wu, J., Child, R., Luan, D., Amodei, D., and Sutskever, I.</span> <span class="ref-year">(2019).</span> <a href="https://cdn.openai.com/better-language-models/language_models_are_unsupervised_multitask_learners.pdf" class="ref-title" target="_blank" rel="noopener">Language models are unsupervised multitask learners</a>.
+ </div>
+<div class="reference" id="ref-bengio2013"> <span class="ref-authors">Bengio, Y., Léonard, N., and Courville, A.</span> <span class="ref-year">(2013).</span> <span class="ref-title">Estimating or propagating gradients through stochastic neurons for conditional computation</span>.
+<span class="ref-venue"> <em>arXiv preprint arXiv:1308.3432</em> </span> </div>
+<div class="reference" id="ref-amini2019"> <span class="ref-authors">Amini, A., Gabriel, S., Lin, P., Koncel-Kedziorski, R., Choi, Y., and Hajishirzi, H.</span> <span class="ref-year">(2019).</span> <a href="https://aclanthology.org/N19-1245/" class="ref-title" target="_blank" rel="noopener">MathQA: Towards interpretable math word problem solving with operation-based formalisms</a>.
+<span class="ref-venue"> <em>NAACL</em>.
+</span> </div>
+<div class="reference" id="ref-raffel2020"> <span class="ref-authors">Raffel, C., Shazeer, N., Roberts, A., Lee, K., Narain, S., Matena, M., Zhou, Y., Li, W., and Liu, P. J.</span> <span class="ref-year">(2020).</span> <a href="https://jmlr.org/papers/v21/20-074.html" class="ref-title" target="_blank" rel="noopener">Exploring the limits of transfer learning with a unified text-to-text transformer</a>.
+<span class="ref-venue"> <em>Journal of Machine Learning Research</em>, 21(140), 1-67.
+</span> </div>
+<h2 id="appendix-design-decisions">Appendix: Design Decisions</h2>
+<p>Three design choices shaped this project. Full decision records with alternatives considered are in the <a href="https://github.com/sumitdotml/moe-emergence/tree/main/docs/decisions">project repository</a>.</p>
+<p><strong>GPT-2 as base model.</strong> The goal is observing MoE routing behavior, not pushing performance. GPT-2 small is thoroughly documented, has stable HuggingFace integration, and fits within an $80 GPU budget. Its simplicity (no RoPE, no GQA, standard LayerNorm) means any observed effects can be attributed to the MoE routing rather than architectural quirks. More modern alternatives (Pythia-160M, custom Llama-style) were considered but added complexity without clear benefit for a pedagogical study.</p>
+<p><strong>MoE in the last 4 layers.</strong> Early Transformer layers tend to learn generic features (syntax, common patterns), while later layers learn more semantic, domain-specific features. Replacing all 12 layers with MoE would cost ~3x the compute and make it harder to interpret whether specialization reflects domain structure or just low-level token statistics. Layers 8-11 are where domain-specific routing is most meaningful, and the compute savings left budget for ablations.</p>
+<p><strong>Warm-start via deepcopy.</strong> Each expert starts as an exact copy of the pretrained MLP, plus tiny Gaussian noise (<code>std = param.std() * 1e-3</code>) for symmetry breaking. This means the model works identically at step 0 and experts diverge from a known baseline. Random initialization would break pretrained representations and confound “learning to specialize” with “learning to function at all.” The noise scale matters: using <code>param.norm()</code> instead of <code>param.std()</code> would corrupt weights because the norm sums over millions of elements.</p>  </main> <footer class="research-footer"> <a href="/research">Back to Research</a> <span class="separator">|</span> <a href="/">herambve</a> </footer> </article> <script type="module">const e=document.querySelector(".revision-toggle"),i=document.getElementById("revision-history");e&&i&&e.addEventListener("click",()=>{const t=e.getAttribute("aria-expanded")==="true";e.setAttribute("aria-expanded",(!t).toString()),i.hidden=t});</script> <span class="view-tracker" data-slug="research/expert-emergence-in-moe" data-worker-url data-worker-api-key style="display:none" data-astro-cid-e75zxctz></span><script type="module">const p=()=>{const{hostname:w,port:e}=window.location;if(!w)return!1;const t=w.toLowerCase();return!!(["localhost","127.0.0.1","0.0.0.0","[::1]"].includes(t)||t.endsWith(".local")||t.includes("localhost")||e&&e!=="80"&&e!=="443")};async function v(){document.querySelectorAll(".view-counter").forEach(async e=>{const t=e.getAttribute("data-slug"),l=e.getAttribute("data-worker-url"),g=e.getAttribute("data-read-only")==="true",y=e.getAttribute("data-worker-api-key")||"",i=e.querySelector(".view-count-number");if(!t||!l||!i)return;if(p()){i.textContent="-- reads (dev)",e.classList.add("loaded");return}const r=t,u=`viewed_${r}`,s=`view_display_failed_${r}`,a=localStorage.getItem(u),c=Number(localStorage.getItem(s)),n=Date.now(),o=1440*60*1e3,d=300*1e3,f=!g&&(!a||n-parseInt(a)>o);try{const S=f?"POST":"GET",m=await fetch(`${l}/views/${r}`,{method:S,headers:{"Content-Type":"application/json",...y?{"X-Worker-Api-Key":y}:{}}});if(!m.ok){(!Number.isFinite(c)||n-c>d)&&(console.warn(`View count fetch failed for ${r}: ${m.status}`),localStorage.setItem(s,n.toString()));return}const h=await m.json();if(f&&localStorage.setItem(u,n.toString()),localStorage.removeItem(s),h.views===0){e instanceof HTMLElement&&(e.style.display="none");return}const b=new Intl.NumberFormat("en-US").format(h.views),A=h.views===1?"read":"reads";i.textContent=`${b} ${A}`,e.classList.add("loaded")}catch(S){(!Number.isFinite(c)||n-c>d)&&(console.error("Error tracking views:",S),localStorage.setItem(s,n.toString()))}})}async function k(){document.querySelectorAll(".view-tracker").forEach(async e=>{const t=e.getAttribute("data-slug"),l=e.getAttribute("data-worker-url"),g=e.getAttribute("data-worker-api-key")||"";if(!t||!l||p()||Array.from(document.querySelectorAll(".view-counter")).some(o=>{const d=o.getAttribute("data-slug"),f=o.getAttribute("data-read-only")==="true";return d===t&&!f}))return;const i=`viewed_${t}`,r=`view_failed_${t}`,u=localStorage.getItem(i),s=Number(localStorage.getItem(r)),a=Date.now(),c=1440*60*1e3,n=300*1e3;if(!u||a-parseInt(u)>c)try{const o=await fetch(`${l}/views/${t}`,{method:"POST",headers:{"Content-Type":"application/json",...g?{"X-Worker-Api-Key":g}:{}}});o.ok?(localStorage.setItem(i,a.toString()),localStorage.removeItem(r)):(!Number.isFinite(s)||a-s>n)&&(console.warn(`View tracking failed for ${t}: ${o.status}`),localStorage.setItem(r,a.toString()))}catch(o){console.error("Error tracking view:",o)}})}v();k();document.addEventListener("astro:page-load",v);document.addEventListener("astro:page-load",k);</script> </body></html>

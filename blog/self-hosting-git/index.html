@@ -1,0 +1,561 @@
+<!DOCTYPE html><html lang="en"> <head><!-- Global Metadata --><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="icon" type="image/png" href="/personal0website/favicon.png"><link rel="sitemap" href="/personal0website/sitemap-index.xml"><!-- KaTeX CSS for math rendering --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous"><link rel="alternate" type="application/rss+xml" title="herambve" href="https://herambve.github.io/rss.xml"><meta name="generator" content="Astro v5.15.1"><!-- Canonical URL --><link rel="canonical" href="https://herambve.github.io/personal0website/blog/self-hosting-git/"><!-- Primary Meta Tags --><title>Self-Hosting Git with Gitea + Tailscale + Cloudflare Tunnel</title><meta name="title" content="Self-Hosting Git with Gitea + Tailscale + Cloudflare Tunnel"><meta name="description" content="documenting how I turned my mac mini into a self-hosted Git server with Gitea, GitHub pull mirrors, Tailscale, Cloudflare Tunnel, and daily backups"><!-- Open Graph / Facebook --><meta property="og:type" content="website"><meta property="og:url" content="https://herambve.github.io/personal0website/blog/self-hosting-git/"><meta property="og:title" content="Self-Hosting Git with Gitea + Tailscale + Cloudflare Tunnel"><meta property="og:description" content="documenting how I turned my mac mini into a self-hosted Git server with Gitea, GitHub pull mirrors, Tailscale, Cloudflare Tunnel, and daily backups"><meta property="og:image" content="https://herambve.github.io/personal0website/_astro/og.qI0zBlRF.png"><!-- Twitter --><meta name="twitter:card" content="summary_large_image"><meta name="twitter:url" content="https://herambve.github.io/personal0website/blog/self-hosting-git/"><meta name="twitter:title" content="Self-Hosting Git with Gitea + Tailscale + Cloudflare Tunnel"><meta name="twitter:description" content="documenting how I turned my mac mini into a self-hosted Git server with Gitea, GitHub pull mirrors, Tailscale, Cloudflare Tunnel, and daily backups"><meta name="twitter:image" content="https://herambve.github.io/personal0website/_astro/og.qI0zBlRF.png"><script>
+	(function initializeTheme() {
+		try {
+			const stored =
+				typeof localStorage !== "undefined"
+					? localStorage.getItem("theme")
+					: null;
+			const prefersDark =
+				typeof window !== "undefined" &&
+				window.matchMedia &&
+				window.matchMedia("(prefers-color-scheme: dark)").matches;
+			const theme = stored ?? (prefersDark ? "dark" : "light");
+			document.documentElement.setAttribute("data-theme", theme);
+		} catch (error) {
+			console.error("Theme initialization failed:", error);
+		}
+	})();
+</script><script type="module">(()=>{if(typeof window>"u"||window.__codeEnhancerInitialized)return;window.__codeEnhancerInitialized=!0;const i="Copy",u="Copied",p="Toggle line wrap",w='<svg class="copy-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>',g='<svg class="check-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>',h='<svg class="wrap-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M3 12h15a3 3 0 1 1 0 6h-4"/><polyline points="14 15 17 18 14 21"/></svg>',m=()=>{const e=document.createElement("button");return e.className="copy-button",e.type="button",e.setAttribute("aria-label",i),e.innerHTML=w+g,e},b=()=>{const e=document.createElement("button");return e.className="wrap-button",e.type="button",e.setAttribute("aria-label",p),e.innerHTML=h,e},v=(e,t,o)=>{const c=document.createElement("div");c.className="code-block-header";const r=document.createElement("span");r.className="code-language",r.textContent=e.toUpperCase();const n=document.createElement("div");return n.style.display="flex",n.style.alignItems="center",n.append(t,o),c.append(r,n),c},s=()=>{document.querySelectorAll("pre.astro-code").forEach(e=>{const t=e;if(t.dataset.enhanced==="true"||!t.parentNode)return;t.dataset.enhanced="true";const o=t.querySelector("code");if(!o)return;const c=t.getAttribute("data-language")||t.getAttribute("class")?.match(/language-(\w+)/)?.[1]||o.getAttribute("class")?.match(/language-(\w+)/)?.[1]||"code",r=document.createElement("div");r.className="code-block-wrapper";const n=b(),a=m(),y=v(c,n,a);t.parentNode.insertBefore(r,t),r.append(y,t),t.style.borderRadius="0";const d=()=>{const l=o.scrollWidth>o.clientWidth;n.style.display=l?"flex":"none"};d(),window.addEventListener("resize",d),n.addEventListener("click",()=>{t.classList.toggle("wrapped"),n.classList.toggle("active")}),a.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(o.textContent||""),a.setAttribute("aria-label",u),a.classList.add("copied"),window.setTimeout(()=>{a.setAttribute("aria-label",i),a.classList.remove("copied")},1500)}catch(l){console.error("Failed to copy code:",l)}})})};document.readyState==="loading"?document.addEventListener("DOMContentLoaded",s,{once:!0}):s(),document.addEventListener("astro:page-load",s)})();</script><link rel="stylesheet" href="/personal0website/_astro/_slug_.CGiWK2lV.css">
+<style>.date-meta[data-astro-cid-nvahdsmq]{margin:0;display:inline-flex;align-items:baseline;gap:.35em;font-size:.9em;color:var(--text-color-muted)}.date-label[data-astro-cid-nvahdsmq]{font-weight:var(--font-weight-medium);letter-spacing:.01em}.date-value[data-astro-cid-nvahdsmq]{font-weight:var(--font-weight-regular)}@media(max-width:720px){.date-meta[data-astro-cid-nvahdsmq]{font-size:.85em}}@media(max-width:480px){.date-meta[data-astro-cid-nvahdsmq]{font-size:.8em}}
+.view-counter[data-astro-cid-e75zxctz]{display:none;align-items:baseline;gap:.75em;font-size:.9em;color:var(--text-color-muted);font-weight:var(--font-weight-regular)}.view-counter[data-astro-cid-e75zxctz].loaded{display:inline-flex}.view-separator[data-astro-cid-e75zxctz]{user-select:none}.view-count[data-astro-cid-e75zxctz]{display:inline-flex;align-items:baseline}.view-count-number[data-astro-cid-e75zxctz]{font-variant-numeric:tabular-nums}@media(max-width:720px){.view-counter[data-astro-cid-e75zxctz]{font-size:.85em}}@media(max-width:480px){.view-counter[data-astro-cid-e75zxctz]{font-size:.8em}}
+</style>
+<link rel="stylesheet" href="/personal0website/_astro/_slug_.CNdIMmcf.css">
+<style>.post-header{margin-bottom:2em}.post-title{margin:0 0 .5em;padding-top:0}.post-dates{display:flex;flex-wrap:wrap;gap:.75em;margin-top:.6em}.post-dates :global(.date-meta){margin:0}@media(max-width:720px){.post-header{margin-bottom:1.5em}.post-dates{margin-top:.5em}}@media(max-width:480px){.post-header{margin-bottom:1.25em}.post-dates{margin-top:.45em}}
+button[data-astro-cid-x3pjskd3]{font:inherit;background:none;border:none;cursor:pointer;padding:0;color:var(--text-color);display:flex;align-items:center;justify-content:center;position:relative;transition:color .2s ease;margin:0;width:2.2em;height:2.2em}button[data-astro-cid-x3pjskd3]:hover{color:var(--accent-purple)}.icon[data-astro-cid-x3pjskd3]{width:1.375em;height:1.375em}.sun-icon[data-astro-cid-x3pjskd3],.moon-icon[data-astro-cid-x3pjskd3]{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}[data-theme=light] .sun-icon[data-astro-cid-x3pjskd3],[data-theme=dark] .moon-icon[data-astro-cid-x3pjskd3]{display:none}
+.brand-icon-img[data-astro-cid-t7mqzaxp]{display:block;width:var(--brand-icon-size);height:var(--brand-icon-size)}
+</style></head> <body> <header data-site-header data-astro-cid-3ef6ksr2> <div class="site-nav breadcrumb-nav" data-astro-cid-3ef6ksr2> <nav class="breadcrumbs" aria-label="Breadcrumb" data-astro-cid-ilhxcym7> <a href="/personal0website" class="breadcrumb-link home" data-astro-cid-ilhxcym7> <img src="/personal0website/_astro/brand-icon.DEAsHZtE_2mYmMn.webp" srcset="/personal0website/_astro/brand-icon.DEAsHZtE_2mYmMn.webp 1x, /personal0website/_astro/brand-icon.DEAsHZtE_Z1TS1kS.webp 2x" alt="Home" loading="eager" style="--brand-icon-size: 1.75em" data-astro-cid-t7mqzaxp="true" decoding="async" fetchpriority="auto" width="48" height="48" class="brand-icon-img">  </a> <span class="separator" data-astro-cid-ilhxcym7>/</span><a href="/personal0website/blog" class="breadcrumb-link" data-astro-cid-ilhxcym7> Blog </a> <span class="separator" data-astro-cid-ilhxcym7>/</span><a href="/personal0website/blog/self-hosting-git" class="breadcrumb-link active" aria-current="page" data-astro-cid-ilhxcym7> Self-Hosting Git </a>  </nav>  <button class="theme-toggle" aria-label="Toggle theme" data-astro-cid-x3pjskd3> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="22" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" data-astro-cid-x3pjskd3="true" class="lucide lucide-sun sun-icon icon">  <circle cx="12" cy="12" r="4"></circle> <path d="M12 2v2"></path> <path d="M12 20v2"></path> <path d="m4.93 4.93 1.41 1.41"></path> <path d="m17.66 17.66 1.41 1.41"></path> <path d="M2 12h2"></path> <path d="M20 12h2"></path> <path d="m6.34 17.66-1.41 1.41"></path> <path d="m19.07 4.93-1.41 1.41"></path>  </svg> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="22" height="22" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" data-astro-cid-x3pjskd3="true" class="lucide lucide-moon moon-icon icon">  <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"></path>  </svg> </button>  <script type="module">const m=document.querySelectorAll(".theme-toggle");m.forEach(t=>{t.addEventListener("click",()=>{const e=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark";document.documentElement.setAttribute("data-theme",e),localStorage.setItem("theme",e)})});</script> </div> </header>  <script type="module">const s=document.querySelectorAll("header[data-site-header]");if(s.length>0){const n=()=>{const t=window.scrollY>0;s.forEach(a=>{a.classList.toggle("scrolled",t)})};n(),window.addEventListener("scroll",n,{passive:!0})}const o=document.querySelectorAll(".menu-toggle");o.forEach(n=>{const t=n.closest(".home-nav");if(!t)return;const a=e=>{t.toggleAttribute("data-menu-open",e),n.setAttribute("aria-expanded",String(e))};n.addEventListener("click",e=>{e.stopPropagation(),a(!t.hasAttribute("data-menu-open"))}),t.querySelectorAll(".home-links a").forEach(e=>{e.addEventListener("click",()=>a(!1))}),document.addEventListener("click",e=>{t.hasAttribute("data-menu-open")&&!t.contains(e.target)&&a(!1)}),document.addEventListener("keydown",e=>{e.key==="Escape"&&t.hasAttribute("data-menu-open")&&(a(!1),n.focus())})});</script> <main> <article> <div class="post-header"> <h1 class="post-title">Self-Hosting Git with Gitea + Tailscale + Cloudflare Tunnel</h1> <div class="post-dates"> <div class="date-meta" data-astro-cid-nvahdsmq="true"><span class="date-label" data-astro-cid-nvahdsmq>Last updated: </span><time class="date-value" datetime="2026-07-09T00:00:00.000Z" data-astro-cid-nvahdsmq>Jul 9, 2026</time> </div>  <div class="view-counter" data-slug="self-hosting-git" data-worker-url data-read-only="false" data-worker-api-key data-astro-cid-e75zxctz><span class="view-separator" aria-hidden="true" data-astro-cid-e75zxctz>•</span><span class="view-count" aria-label="View count" data-astro-cid-e75zxctz><span class="view-count-number" data-astro-cid-e75zxctz>--</span></span></div><script type="module">const p=()=>{const{hostname:w,port:e}=window.location;if(!w)return!1;const t=w.toLowerCase();return!!(["localhost","127.0.0.1","0.0.0.0","[::1]"].includes(t)||t.endsWith(".local")||t.includes("localhost")||e&&e!=="80"&&e!=="443")};async function v(){document.querySelectorAll(".view-counter").forEach(async e=>{const t=e.getAttribute("data-slug"),l=e.getAttribute("data-worker-url"),g=e.getAttribute("data-read-only")==="true",y=e.getAttribute("data-worker-api-key")||"",i=e.querySelector(".view-count-number");if(!t||!l||!i)return;if(p()){i.textContent="-- reads (dev)",e.classList.add("loaded");return}const r=t,u=`viewed_${r}`,s=`view_display_failed_${r}`,a=localStorage.getItem(u),c=Number(localStorage.getItem(s)),n=Date.now(),o=1440*60*1e3,d=300*1e3,f=!g&&(!a||n-parseInt(a)>o);try{const S=f?"POST":"GET",m=await fetch(`${l}/views/${r}`,{method:S,headers:{"Content-Type":"application/json",...y?{"X-Worker-Api-Key":y}:{}}});if(!m.ok){(!Number.isFinite(c)||n-c>d)&&(console.warn(`View count fetch failed for ${r}: ${m.status}`),localStorage.setItem(s,n.toString()));return}const h=await m.json();if(f&&localStorage.setItem(u,n.toString()),localStorage.removeItem(s),h.views===0){e instanceof HTMLElement&&(e.style.display="none");return}const b=new Intl.NumberFormat("en-US").format(h.views),A=h.views===1?"read":"reads";i.textContent=`${b} ${A}`,e.classList.add("loaded")}catch(S){(!Number.isFinite(c)||n-c>d)&&(console.error("Error tracking views:",S),localStorage.setItem(s,n.toString()))}})}async function k(){document.querySelectorAll(".view-tracker").forEach(async e=>{const t=e.getAttribute("data-slug"),l=e.getAttribute("data-worker-url"),g=e.getAttribute("data-worker-api-key")||"";if(!t||!l||p()||Array.from(document.querySelectorAll(".view-counter")).some(o=>{const d=o.getAttribute("data-slug"),f=o.getAttribute("data-read-only")==="true";return d===t&&!f}))return;const i=`viewed_${t}`,r=`view_failed_${t}`,u=localStorage.getItem(i),s=Number(localStorage.getItem(r)),a=Date.now(),c=1440*60*1e3,n=300*1e3;if(!u||a-parseInt(u)>c)try{const o=await fetch(`${l}/views/${t}`,{method:"POST",headers:{"Content-Type":"application/json",...g?{"X-Worker-Api-Key":g}:{}}});o.ok?(localStorage.setItem(i,a.toString()),localStorage.removeItem(r)):(!Number.isFinite(s)||a-s>n)&&(console.warn(`View tracking failed for ${t}: ${o.status}`),localStorage.setItem(r,a.toString()))}catch(o){console.error("Error tracking view:",o)}})}v();k();document.addEventListener("astro:page-load",v);document.addEventListener("astro:page-load",k);</script> </div> </div>  <p>draft: true</p>
+<p>(wip)</p>
+<p>I’ve kinda always wanted to keep my own self-hosted backup of my GitHub, so I finally went ahead
+and tried it on my mac mini. I used Gitea for the Git server, GitHub pull mirrors for existing
+repos, Tailscale for private SSH access, Cloudflare Tunnel for the public web UI, and a few daily
+jobs for backup and cleanup.</p>
+<p>I am writing this as I try the setup myself. So this is not meant to be a perfectly detached
+checklist copied from docs. It is more like me writing down what I did, where I changed my mind, and
+what I would probably keep if I had to set it up again.</p>
+<p>At first, I thought this might be about replacing GitHub. It is not, at least not for me. GitHub is
+still good (or at least is still the industry standard) at public repo hosting, pull requests,
+comments, issues, stars, releases, and general discovery. What I wanted was another place where my
+repos live. A machine I control, reachable privately, visible publicly for read-only browsing,
+backed up daily, and restorable if something goes wrong.</p>
+<p>The version I ended up with looks roughly like this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>GitHub</span></span>
+<span class="line"><span>  source of truth for GitHub-first repos</span></span>
+<span class="line"><span>  pull requests, issues, stars, comments</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Gitea on the always-on machine</span></span>
+<span class="line"><span>  local Git server</span></span>
+<span class="line"><span>  native GitHub pull mirrors</span></span>
+<span class="line"><span>  private repos</span></span>
+<span class="line"><span>  public web UI</span></span>
+<span class="line"><span>  daily backups</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Tailscale</span></span>
+<span class="line"><span>  private SSH Git access</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>Cloudflare Tunnel</span></span>
+<span class="line"><span>  public HTTPS access to the Gitea web UI</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>launchd</span></span>
+<span class="line"><span>  keeps Gitea, cloudflared, backups, metadata refresh, and cleanup running</span></span></code></pre>
+<p>I am using placeholders throughout the post.</p>
+<ul>
+<li><code>~/gitea-stack</code> for the local stack directory</li>
+<li><code>&lt;github-user&gt;</code> for the GitHub account</li>
+<li><code>&lt;gitea-user&gt;</code> for the Gitea account</li>
+<li><code>&lt;tailscale-ip&gt;</code> for the private Tailscale address</li>
+<li><code>git.example.com</code> for the public hostname</li>
+</ul>
+<p>I am intentionally not putting real local usernames, private IPs, tunnel IDs, email addresses, token
+paths, or secrets in a public post.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="1-what-i-ended-up-building">1. What I Ended Up Building</h2>
+<p>I ended up thinking about the setup as two kinds of repos.</p>
+<p>The first kind is a GitHub-first repo.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>laptop -&gt; push to GitHub -&gt; Gitea pulls from GitHub</span></span></code></pre>
+<p>For repos like this, I let GitHub stay the source of truth. Gitea is a native pull mirror. It keeps
+a local copy of branches and tags, and it shows the mirror icon in the UI.</p>
+<p>The second kind is a Gitea-first repo.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>laptop -&gt; push to Gitea</span></span>
+<span class="line"><span>optional later step -&gt; publish to GitHub</span></span></code></pre>
+<p>For repos like this, I start on the local Git server. They stay local unless I explicitly decide to
+publish them to GitHub.</p>
+<p>This split mattered more than I expected.</p>
+<p>When a repo already lives on GitHub and people interact with it there, I prefer to let GitHub stay
+in charge. Pull requests, comments, issues, and stars are not Git objects. Mirroring commits alone
+does not move that whole social layer.</p>
+<p>When a repo starts locally, Gitea can be the source of truth. I can still publish it to GitHub later
+if that becomes useful.</p>
+<p>I kept this shape because it lets GitHub do what GitHub is good at, while still giving me a local
+Git home that I can control and back up.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="2-why-gitea">2. Why Gitea</h2>
+<p>I picked Gitea because it is small and boring in a good way.</p>
+<p>These were the pieces I needed.</p>
+<ul>
+<li>Git over SSH</li>
+<li>public and private repos</li>
+<li>a web UI</li>
+<li>native repository mirrors</li>
+<li>SQLite support</li>
+<li>a single binary install path</li>
+<li>easy file-based backup</li>
+</ul>
+<p>This was the mental model I liked.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>launchd -&gt; gitea binary -&gt; SQLite + bare Git repos</span></span></code></pre>
+<p>There is no container layer in my version. There is nothing wrong with Docker, but I chose the
+direct binary install because it is easy to understand. If something fails, I only have a few places
+I usually check.</p>
+<ul>
+<li>the Gitea process</li>
+<li><code>app.ini</code></li>
+<li>the SQLite database</li>
+<li>the bare repositories</li>
+<li>the launchd service</li>
+<li>the logs</li>
+</ul>
+<p>That felt like a manageable list.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="3-directory-layout">3. Directory Layout</h2>
+<p>I kept the stack under one directory.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>~/gitea-stack/</span></span>
+<span class="line"><span>  bin/</span></span>
+<span class="line"><span>  custom/conf/</span></span>
+<span class="line"><span>  data/</span></span>
+<span class="line"><span>  repositories/</span></span>
+<span class="line"><span>  log/</span></span>
+<span class="line"><span>  run/</span></span>
+<span class="line"><span>  scripts/</span></span>
+<span class="line"><span>  secrets/</span></span>
+<span class="line"><span>  metadata/</span></span>
+<span class="line"><span>  lists/</span></span></code></pre>
+<p>Each directory had a clear job for me.</p>
+<ul>
+<li><code>bin/</code> for the Gitea binary</li>
+<li><code>custom/conf/</code> for Gitea config</li>
+<li><code>data/</code> for the SQLite database and Gitea state</li>
+<li><code>repositories/</code> for bare Git repos</li>
+<li><code>log/</code> for service and job logs</li>
+<li><code>run/</code> for lock files</li>
+<li><code>scripts/</code> for helper commands</li>
+<li><code>secrets/</code> for tokens and generated secrets</li>
+<li><code>metadata/</code> for GitHub metadata snapshots</li>
+<li><code>lists/</code> for generated repo lists</li>
+</ul>
+<p>This layout made backup simpler. Most state lives in one directory. Logs and temporary files can be
+excluded. I add anything outside the stack, such as SSH key material used by the service, to the
+backup explicitly.</p>
+<p>I created the base directories with this command.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">mkdir</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -p</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/{bin,custom/conf,data,repositories,log,run,scripts,secrets,metadata,lists}</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">chmod</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387"> 700</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/secrets</span></span></code></pre>
+<hr/>
+<p>draft: true</p>
+<h2 id="4-installing-gitea">4. Installing Gitea</h2>
+<p>I installed Gitea from the official binary.</p>
+<p>On Apple Silicon, I used the <code>darwin-arm64</code> build. On Intel Macs, the equivalent would be
+<code>darwin-amd64</code>.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#D20F39;--shiki-light-font-style:italic;--shiki-dark:#F38BA8;--shiki-dark-font-style:italic">cd</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/bin</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">curl</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -L</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -o</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> &quot;https://dl.gitea.com/gitea/&lt;version&gt;/gitea-&lt;version&gt;-darwin-arm64&quot;</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">curl</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -L</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -o</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea.asc</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> &quot;https://dl.gitea.com/gitea/&lt;version&gt;/gitea-&lt;version&gt;-darwin-arm64.asc&quot;</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">chmod</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> +x</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span></span></code></pre>
+<p>I verified the signature.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gpg</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --keyserver</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> hkps://keys.openpgp.org</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --recv</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> 7C9E68152594688862D62AF62D9AE806EC1592E2</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gpg</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --verify</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea.asc</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span></span></code></pre>
+<p>I also checked that Git existed.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --version</span></span></code></pre>
+<p>Gitea shells out to Git, so the machine needs Git installed too.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="5-first-run-and-web-install">5. First Run And Web Install</h2>
+<p>I ran Gitea manually first.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">GITEA_WORK_DIR</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">=</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">~/gitea-stack</span><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic"> \</span></span>
+<span class="line"><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">  ~/gitea-stack/bin/gitea</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> web</span><span style="--shiki-light:#EA76CB;--shiki-dark:#F5C2E7"> \</span></span>
+<span class="line"><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">  --config</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/custom/conf/app.ini</span><span style="--shiki-light:#EA76CB;--shiki-dark:#F5C2E7"> \</span></span>
+<span class="line"><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">  --work-path</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack</span></span></code></pre>
+<p>At this point I opened the installer only on a private address. I did not want the first install
+screen exposed publicly.</p>
+<p>These were the basic settings I used.</p>
+<ul>
+<li>database set to SQLite</li>
+<li>repository root set to <code>~/gitea-stack/repositories</code></li>
+<li>app data path set to <code>~/gitea-stack/data</code></li>
+<li>web port set to <code>3000</code></li>
+<li>SSH port set to <code>2222</code> or another non-default port</li>
+<li>registration disabled after the first admin user is created</li>
+</ul>
+<p>After the first install, I locked down the config.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">chmod</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387"> 600</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/custom/conf/app.ini</span></span></code></pre>
+<p>Then I restarted Gitea and checked the health endpoint.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">curl</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> http://</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">private-addres</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">s</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">:3000/api/healthz</span></span></code></pre>
+<p>At this stage, I still kept the server private.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="6-moving-secrets-out-of-appini">6. Moving Secrets Out Of app.ini</h2>
+<p>Gitea creates several secret values during setup. I did not want those values pasted directly into
+<code>app.ini</code>, so I moved them into files under <code>secrets/</code> and pointed <code>app.ini</code> to those files.</p>
+<p>The config supports file URIs.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="ini"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">SECRET_KEY_URI</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5"> =</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> file:/path/to/secrets/secret-key</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">INTERNAL_TOKEN_URI</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5"> =</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> file:/path/to/secrets/internal-token</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">JWT_SECRET_URI</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5"> =</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> file:/path/to/secrets/oauth2-jwt-secret</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">LFS_JWT_SECRET_URI</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5"> =</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4"> file:/path/to/secrets/lfs-jwt-secret</span></span></code></pre>
+<p>The real paths are absolute local paths on the machine. I am not putting those exact paths in a
+public post.</p>
+<p>I locked the files down.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">chmod</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387"> 700</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/secrets</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">chmod</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387"> 600</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/secrets/</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">*</span></span></code></pre>
+<p>I wanted <code>app.ini</code> to describe where secrets live, not become the place where every secret value is
+pasted forever.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="7-running-gitea-with-launchd">7. Running Gitea With launchd</h2>
+<p>On macOS, I used <code>launchd</code> to run Gitea after reboot.</p>
+<p>The service runs this command.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">~</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">/gitea-stack/bin/gitea web </span><span style="--shiki-light:#EA76CB;--shiki-dark:#F5C2E7">\</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">  --config</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/custom/conf/app.ini</span><span style="--shiki-light:#EA76CB;--shiki-dark:#F5C2E7"> \</span></span>
+<span class="line"><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">  --work-path</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack</span></span></code></pre>
+<p>The LaunchDaemon has these settings.</p>
+<ul>
+<li><code>RunAtLoad</code></li>
+<li><code>KeepAlive</code></li>
+<li>working directory set to <code>~/gitea-stack</code></li>
+<li>stdout path set to <code>~/gitea-stack/log/launchd.out.log</code></li>
+<li>stderr path set to <code>~/gitea-stack/log/launchd.err.log</code></li>
+<li>user set to a normal local user, not root</li>
+</ul>
+<p>After installing the plist, I checked it.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">sudo</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> launchctl</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> print</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> system/</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">service-nam</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">e</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span></span></code></pre>
+<p>Then I checked Gitea.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">curl</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> http://</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">private-addres</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">s</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">:3000/api/healthz</span></span></code></pre>
+<p>I also rebooted the machine and checked again. A server that does not survive reboot does not feel
+finished to me.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="8-private-ssh-access-with-tailscale">8. Private SSH Access With Tailscale</h2>
+<p>I used Tailscale before doing anything public.</p>
+<p>This was the first networking choice I made because it gave me a private path before anything was on
+the public internet.</p>
+<p>This was the private path.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>laptop -&gt; Tailscale -&gt; Mac mini -&gt; Gitea</span></span></code></pre>
+<p>This let another laptop clone and push without SSH-ing into the Mac mini first.</p>
+<p>On the laptop, I created a dedicated SSH key.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">ssh-keygen</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -t</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ed25519</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -f</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/.ssh/id_ed25519_gitea</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -C</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> &quot;gitea&quot;</span></span></code></pre>
+<p>Then I added the public key to Gitea.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">cat</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/.ssh/id_ed25519_gitea.pub</span></span></code></pre>
+<p>My SSH config entry looks like this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>Host gitea</span></span>
+<span class="line"><span>  HostName &lt;tailscale-ip&gt;</span></span>
+<span class="line"><span>  Port 2222</span></span>
+<span class="line"><span>  User git</span></span>
+<span class="line"><span>  IdentityFile ~/.ssh/id_ed25519_gitea</span></span>
+<span class="line"><span>  IdentitiesOnly yes</span></span></code></pre>
+<p>I tested it with this command.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">ssh</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -T</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span></span></code></pre>
+<p>Then I set a repo remote.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> remote</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> set-url</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> origin</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea:</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">gitea-use</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">r</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">/</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">rep</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">o</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">.git</span></span></code></pre>
+<p>At this point, private Git over SSH worked through Tailscale.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="9-choosing-the-mirror-direction">9. Choosing The Mirror Direction</h2>
+<p>There are two possible mirror directions.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>Gitea -&gt; GitHub</span></span>
+<span class="line"><span>GitHub -&gt; Gitea</span></span></code></pre>
+<p>For GitHub-first repos, I chose GitHub ⇒ Gitea.</p>
+<p>GitHub is more than a Git remote. It also holds pull requests, comments, issues, stars, releases,
+and public repo pages. When the repo’s public activity already happens on GitHub, I think GitHub is
+the better source of truth.</p>
+<p>So Gitea pulls from GitHub.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>push to GitHub -&gt; Gitea pulls from GitHub</span></span></code></pre>
+<p>I liked this direction because it gave me the things I cared about.</p>
+<ul>
+<li>native mirror icon in Gitea</li>
+<li>GitHub PRs staying on GitHub</li>
+<li>GitHub comments staying on GitHub</li>
+<li>public repo discovery staying on GitHub</li>
+<li>no custom push hooks for GitHub-source repos</li>
+<li>no write deploy keys for every GitHub-source repo</li>
+<li>a local mirror and backup on the Mac mini</li>
+</ul>
+<p>For Gitea-first repos, Gitea ⇒ GitHub can still make sense. The important part for me is that
+publishing to GitHub stays explicit.</p>
+<p>I started with the idea of pushing from Gitea to GitHub for everything. I moved away from that
+because it made GitHub’s pull request and issue layer feel secondary, even though most public repo
+activity already happens there.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="10-creating-native-pull-mirrors">10. Creating Native Pull Mirrors</h2>
+<p>For an existing GitHub repo, I created a native Gitea pull mirror.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>GitHub repo -&gt; Gitea migration -&gt; native pull mirror</span></span></code></pre>
+<p>For public repos, the GitHub URL was enough.</p>
+<p>For private repos, Gitea needs credentials that can read the repo. I used a fine-grained GitHub
+token with read-only contents access. I did not give it write access.</p>
+<p>I stored the token in a protected file.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>~/gitea-stack/secrets/github-pull-mirror-token</span></span></code></pre>
+<p>Then I locked it down.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">chmod</span><span style="--shiki-light:#FE640B;--shiki-dark:#FAB387"> 600</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/gitea-stack/secrets/github-pull-mirror-token</span></span></code></pre>
+<p>I did not put this token in <code>.zshrc</code>, dotfiles, shell exports, or public scripts.</p>
+<p>For automatic imports, I wanted this behavior.</p>
+<ul>
+<li>list GitHub repos</li>
+<li>skip forks</li>
+<li>preserve public/private visibility</li>
+<li>create native pull mirrors for missing repos</li>
+<li>use the read-only token for private repos</li>
+<li>avoid write deploy keys unless the repo is Gitea-first</li>
+</ul>
+<p>I set the mirror interval to something short.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>15 minutes</span></span></code></pre>
+<p>A webhook would make syncing more instant, but it also adds another public integration to secure. A
+short pull interval felt good enough.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="11-handling-gitea-first-repos">11. Handling Gitea-First Repos</h2>
+<p>For a new repo that starts on Gitea, this is my flow.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> init</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> repo-name</span></span>
+<span class="line"><span style="--shiki-light:#D20F39;--shiki-light-font-style:italic;--shiki-dark:#F38BA8;--shiki-dark-font-style:italic">cd</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> repo-name</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> remote</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> add</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> origin</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea:</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">gitea-use</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">r</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">/repo-name.git</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> push</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -u</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> origin</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> main</span></span></code></pre>
+<p>I set push-created repos to default to private.</p>
+<p>When I want the repo to appear on GitHub later, I publish it deliberately.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-push-to-github</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --private</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> repo-name</span></span></code></pre>
+<p>or</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-push-to-github</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --public</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> repo-name</span></span></code></pre>
+<p>A Gitea-to-GitHub push hook fits this case. The repo started on Gitea, so pushing it to GitHub is
+an intentional step instead of the default behavior for everything.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="12-github-metadata">12. GitHub Metadata</h2>
+<p>Git stores commits, branches, tags, and files.</p>
+<p>It does not store GitHub descriptions, topics, stars, homepage URLs, archived status, or visibility
+in a way Gitea automatically reuses.</p>
+<p>So I kept a metadata refresh step.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>GitHub API -&gt; metadata JSON -&gt; selected fields applied to Gitea</span></span></code></pre>
+<p>These are the fields I cared about.</p>
+<ul>
+<li>description</li>
+<li>homepage URL</li>
+<li>topics</li>
+<li>star count</li>
+<li>archived state</li>
+<li>visibility</li>
+</ul>
+<p>I did not fake GitHub stars as Gitea stars. I stored the GitHub star count as metadata instead.</p>
+<p>I run this daily, but only write to Gitea when something changed. Otherwise every repo starts
+looking recently updated even when no code changed.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="13-repository-updated-time">13. Repository Updated Time</h2>
+<p>Gitea’s repository list has an <code>Updated ... ago</code> value.</p>
+<p>For a mirror-heavy setup, this can become noisy. Mirror syncs and metadata refreshes can bump the
+repository timestamp even if the latest commit did not change.</p>
+<p>I wanted the repo list to mean this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>repo list updated time = newest branch commit time</span></span></code></pre>
+<p>So I added a small normalizer.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>every 60 seconds:</span></span>
+<span class="line"><span>  for each repo:</span></span>
+<span class="line"><span>    find newest branch commit time</span></span>
+<span class="line"><span>    set repository updated time to that</span></span></code></pre>
+<p>I left the native mirror sync timestamp alone. Gitea can still show when the mirror last synced on
+the repo page.</p>
+<p>So there are two separate signals.</p>
+<ul>
+<li>repo list for last commit activity</li>
+<li>mirror banner for last mirror sync</li>
+</ul>
+<hr/>
+<p>draft: true</p>
+<h2 id="14-daily-jobs">14. Daily Jobs</h2>
+<p>The daily automation ended up as this schedule.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>every 60 seconds:</span></span>
+<span class="line"><span>  normalize repository updated times</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>03:05:</span></span>
+<span class="line"><span>  discover new non-fork GitHub repos and import missing ones</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>03:20:</span></span>
+<span class="line"><span>  refresh GitHub metadata</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>03:45:</span></span>
+<span class="line"><span>  create backup and run maintenance</span></span></code></pre>
+<p>The discovery job does not sync existing repos. Native mirrors already do that on their own
+interval.</p>
+<p>The discovery job only answers one question.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>is there a new non-fork GitHub repo missing from Gitea?</span></span></code></pre>
+<p>When there is one, the job imports it as a native pull mirror.</p>
+<p>I care about this because backups only include what exists in Gitea. If a new GitHub repo never
+gets imported, the Gitea backup cannot include it.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="15-backups">15. Backups</h2>
+<p>My backup includes these files.</p>
+<ul>
+<li>Gitea config</li>
+<li>SQLite database</li>
+<li>repositories</li>
+<li>metadata</li>
+<li>secrets</li>
+<li>required SSH key material</li>
+</ul>
+<p>It excludes these files.</p>
+<ul>
+<li>logs</li>
+<li>temp files</li>
+<li>cache dirs</li>
+</ul>
+<p>The backup job does a few things.</p>
+<ul>
+<li>stop Gitea briefly</li>
+<li>create a <code>.tar.gz</code></li>
+<li>start Gitea again through launchd</li>
+<li>run maintenance</li>
+<li>keep the newest 30 backups</li>
+</ul>
+<p>I also run a restore check. Creating archives is not enough.</p>
+<p>The restore check does this.</p>
+<ul>
+<li>extract the newest archive into a temp dir</li>
+<li>check that config, database, repos, metadata, and secrets exist</li>
+<li>run SQLite <code>quick_check</code></li>
+<li>sample bare repos with <code>git fsck</code></li>
+<li>delete the temp extraction</li>
+</ul>
+<p>That gave me more confidence than just seeing archive files pile up.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="16-maintenance">16. Maintenance</h2>
+<p>The large files I found were not scripts.</p>
+<p>They were old temp clones, migration bundles, and logs.</p>
+<p>My maintenance job does this.</p>
+<ul>
+<li>keep the newest 30 backups</li>
+<li>remove stale metadata for deleted repos</li>
+<li>remove old sync/import/migration temp dirs</li>
+<li>remove old restore-check temp dirs</li>
+<li>remove old import logs</li>
+<li>trim large launchd stdout/stderr logs</li>
+</ul>
+<p>It keeps the small server small.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="17-public-access-with-cloudflare-tunnel">17. Public Access With Cloudflare Tunnel</h2>
+<p>Tailscale handles private access. Cloudflare Tunnel handles public web access.</p>
+<p>I added Cloudflare only after the private Tailscale setup worked. That made the steps easier to
+debug. First I made Git work privately, then I made the web UI public.</p>
+<p>I was partly inspired by this <a href="https://kennethnym.com/blog/a-gentle-introduction-to-cloudflare-tunnels/">blog post</a>,
+which explains the model nicely.</p>
+<p>The high-level path became this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>browser -&gt; Cloudflare -&gt; cloudflared on the Git server -&gt; local Gitea</span></span></code></pre>
+<p>The Git server does not need an inbound router port. <code>cloudflared</code> opens an outbound connection to
+Cloudflare, and Cloudflare routes the public hostname through that connection.</p>
+<p>This was the basic flow I used.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">cloudflared</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> tunnel</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> login</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">cloudflared</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> tunnel</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> create</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">cloudflared</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> tunnel</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> route</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> dns</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> git.example.com</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">cloudflared</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> tunnel</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> run</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea</span></span></code></pre>
+<p>My config looked like this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="yaml"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">tunnel</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">:</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> &lt;tunnel-uuid&gt;</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">credentials-file</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">:</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> ~/.cloudflared/&lt;tunnel-uuid&gt;.json</span></span>
+<span class="line"></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">ingress</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">:</span></span>
+<span class="line"><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">  -</span><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA"> hostname</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">:</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> git.example.com</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA">    service</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">:</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> http://127.0.0.1:3000</span></span>
+<span class="line"><span style="--shiki-light:#7C7F93;--shiki-dark:#9399B2">  -</span><span style="--shiki-light:#1E66F5;--shiki-dark:#89B4FA"> service</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">:</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> http_status:404</span></span></code></pre>
+<p>For my actual setup, I stored the credentials file in a protected secrets directory and ran
+<code>cloudflared</code> with launchd.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="18-public-web-private-ssh">18. Public Web, Private SSH</h2>
+<p>I kept web and SSH separate.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>public web</span></span>
+<span class="line"><span>  https://git.example.com</span></span>
+<span class="line"><span>  Cloudflare Tunnel</span></span>
+<span class="line"><span></span></span>
+<span class="line"><span>private Git SSH</span></span>
+<span class="line"><span>  gitea:&lt;gitea-user&gt;/&lt;repo&gt;.git</span></span>
+<span class="line"><span>  Tailscale</span></span></code></pre>
+<p>The public internet can view public repos.</p>
+<p>Git pushes still go through Tailscale.</p>
+<p>This leaves the Gitea SSH server private. I do not have a reason to expose it publicly right now.</p>
+<p>Gitea still enforces permissions.</p>
+<ul>
+<li>registration disabled</li>
+<li>private repos hidden from anonymous users</li>
+<li>HTTP Git disabled</li>
+<li>basic auth disabled</li>
+<li>admin 2FA enabled</li>
+<li>reverse-proxy auth disabled</li>
+<li>webhooks disabled unless needed</li>
+<li>config and secret files locked down</li>
+</ul>
+<p>Cloudflare gets traffic to the Git server. Gitea decides what each visitor can see.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="19-security-checklist">19. Security Checklist</h2>
+<p>Before I called the setup done, I checked these things.</p>
+<ul>
+<li>production mode is on</li>
+<li>registration is disabled</li>
+<li>push-created repos default to private</li>
+<li>public repos are visible to anonymous users</li>
+<li>private repos are hidden from anonymous users</li>
+<li>HTTP Git is disabled</li>
+<li>SSH is not public</li>
+<li>browser login works</li>
+<li>admin 2FA is enabled</li>
+<li>generated secrets live in files</li>
+<li>secret files are mode <code>600</code></li>
+<li>secret directory is mode <code>700</code></li>
+<li>Gitea config is mode <code>600</code></li>
+<li>Cloudflare tunnel credentials are mode <code>600</code></li>
+<li>private GitHub mirror token is read-only</li>
+<li>GitHub-source repos have no active push hooks</li>
+<li>backups are mode <code>600</code></li>
+<li>restore check passes</li>
+<li>audit passes</li>
+</ul>
+<p>Self-hosting does not help much if tokens leak into shell files, public notes, logs, or old backup
+archives.</p>
+<hr/>
+<p>draft: true</p>
+<h2 id="20-landing-page-and-short-links">20. Landing Page And Short Links</h2>
+<p>Gitea repo paths look like this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>https://git.example.com/&lt;gitea-user&gt;/&lt;repo&gt;</span></span></code></pre>
+<p>The default path is fine, but I wanted the public root page to feel more like a profile page. Gitea
+can show a profile README through a <code>.profile</code> repo.</p>
+<p>For short repo links, I added a small Cloudflare Worker.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>https://git.example.com/repo-name</span></span></code></pre>
+<p>It redirects to this.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>https://git.example.com/&lt;gitea-user&gt;/repo-name</span></span></code></pre>
+<p>I made sure the Worker does not redirect real Gitea paths.</p>
+<ul>
+<li><code>/user</code></li>
+<li><code>/api</code></li>
+<li><code>/assets</code></li>
+<li><code>/explore</code></li>
+<li><code>/&lt;gitea-user&gt;/...</code></li>
+</ul>
+<hr/>
+<p>draft: true</p>
+<h2 id="21-normal-workflow">21. Normal Workflow</h2>
+<p>For a GitHub-first repo, I push to GitHub.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> push</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> origin</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> main</span></span></code></pre>
+<p>Gitea pulls the change on the mirror interval.</p>
+<p>For a new GitHub repo, I let the import job bring it into Gitea.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-import-new-github-repos</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --dry-run</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-import-new-github-repos</span></span></code></pre>
+<p>For a Gitea-first repo, I push to Gitea.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> remote</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> add</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> origin</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> gitea:</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&lt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">gitea-use</span><span style="--shiki-light:#4C4F69;--shiki-dark:#CDD6F4">r</span><span style="--shiki-light:#179299;--shiki-dark:#94E2D5">&gt;</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1">/repo-name.git</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">git</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> push</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> -u</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> origin</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> main</span></span></code></pre>
+<p>To publish a Gitea-first repo to GitHub, I run this command.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-push-to-github</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> --private</span><span style="--shiki-light:#40A02B;--shiki-dark:#A6E3A1"> repo-name</span></span></code></pre>
+<p>For checks, I use these commands.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-audit</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-security-check</span></span>
+<span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-restore-check</span></span></code></pre>
+<p>For a manual backup, I use this command.</p>
+<pre class="astro-code astro-code-themes catppuccin-latte catppuccin-mocha" style="--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto" tabindex="0" data-language="zsh"><code><span class="line"><span style="--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic">gitea-backup</span></span></code></pre>
+<p>The setup has landed here for me. GitHub stays for now for public collaboration (@Cursor yall
+completing your GitHub killer anytime soon?), Gitea for a local mirror and Git home, Tailscale for
+private SSH, Cloudflare Tunnel for public web, and daily jobs for the boring parts.</p>  </article> </main> <footer data-astro-cid-sz7xmlte> <div class="footer-content" data-astro-cid-sz7xmlte> <p class="copyright" data-astro-cid-sz7xmlte><img src="/personal0website/_astro/brand-icon.DEAsHZtE_2mYmMn.webp" srcset="/personal0website/_astro/brand-icon.DEAsHZtE_2mYmMn.webp 1x, /personal0website/_astro/brand-icon.DEAsHZtE_Z1TS1kS.webp 2x" alt loading="eager" style="--brand-icon-size: 1.5em" data-astro-cid-t7mqzaxp="true" decoding="async" fetchpriority="auto" width="48" height="48" class="brand-icon-img"> herambve v2026.09.01</p> <div class="social-links" data-astro-cid-sz7xmlte> <a href="mailto:vengurlekarheramb19@gmail.com" aria-label="Email" title="Email" data-astro-cid-sz7xmlte> <span class="sr-only" data-astro-cid-sz7xmlte>Email</span> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="24" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="1.1" data-astro-cid-sz7xmlte="true" class="lucide lucide-mail icon">  <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"></path> <rect x="2" y="4" width="20" height="16" rx="2"></rect>  </svg> </a><a href="https://github.com/HerambVE" target="_blank" rel="noopener noreferrer" aria-label="GitHub" title="GitHub" data-astro-cid-sz7xmlte> <span class="sr-only" data-astro-cid-sz7xmlte>GitHub</span> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="24" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="1.1" data-astro-cid-sz7xmlte="true" class="lucide lucide-github icon">  <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path> <path d="M9 18c-4.51 2-5-2-7-2"></path>  </svg> </a><a href="https://www.linkedin.com/in/herambve/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" title="LinkedIn" data-astro-cid-sz7xmlte> <span class="sr-only" data-astro-cid-sz7xmlte>LinkedIn</span> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="24" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="1.1" data-astro-cid-sz7xmlte="true" class="lucide lucide-linkedin icon">  <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path> <rect width="4" height="12" x="2" y="9"></rect> <circle cx="4" cy="4" r="2"></circle>  </svg> </a><a href="https://herambve.github.io/resume/" target="_blank" rel="noopener noreferrer" aria-label="Resume" title="Resume" data-astro-cid-sz7xmlte> <span class="sr-only" data-astro-cid-sz7xmlte>Resume</span> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="24" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="1.1" data-astro-cid-sz7xmlte="true" class="lucide lucide-file-text icon">  <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path> <path d="M14 2v4a2 2 0 0 0 2 2h4"></path> <path d="M10 9H8"></path> <path d="M16 13H8"></path> <path d="M16 17H8"></path>  </svg> </a><a href="/rss.xml" aria-label="RSS" title="RSS" data-astro-cid-sz7xmlte> <span class="sr-only" data-astro-cid-sz7xmlte>RSS</span> <svg xmlns="http://www.w3.org/2000/svg" stroke-width="2" width="24" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" fill="none" viewBox="0 0 24 24" aria-hidden="true" strokeWidth="1.1" data-astro-cid-sz7xmlte="true" class="lucide lucide-rss icon">  <path d="M4 11a9 9 0 0 1 9 9"></path> <path d="M4 4a16 16 0 0 1 16 16"></path> <circle cx="5" cy="19" r="1"></circle>  </svg> </a> </div> </div> </footer>  </body></html>
