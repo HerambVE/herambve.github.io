@@ -156,732 +156,7 @@ and also an illustration of attention heads&lt;/p&gt;
 		opacity: 0.3;
 		margin: 2em 0;
 	&quot;&gt;
-&lt;div class=&quot;footnotes-section&quot;&gt;&lt;div id=&quot;footnote-1&quot; class=&quot;footnote-item&quot;&gt;&lt;span class=&quot;footnote-number&quot;&gt;[1]&lt;/span&gt;&lt;span&gt;A Mathematical Framework for Transformer Circuits&lt;/a&gt;, Anthropic, 2021. &lt;a href=&apos;https://transformer-circuits.pub/2021/framework/index.html&apos; target=&apos;_blank&apos;&gt;https://transformer-circuits.pub/2021/framework/index.html&lt;/a&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;</content:encoded></item><item><title>Attention-Only vs. All-Layer LoRA: A Worklog</title><link>https://herambve.github.io/blog/lora-target-module-worklog/</link><guid isPermaLink="true">https://herambve.github.io/blog/lora-target-module-worklog/</guid><description>a longer worklog from narrowing, cleaning, training, and evaluating a Qwen3-8B LoRA target-module comparison</description><pubDate>Fri, 15 May 2026 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;draft: true&lt;/p&gt;
-&lt;p&gt;This is the worklog version of the &lt;a href=&quot;/projects/lora-and-friends&quot;&gt;LoRA and Friends&lt;/a&gt; experiment.&lt;/p&gt;
-&lt;p&gt;The final public artifacts are:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;model checkpoints: &lt;a href=&quot;https://huggingface.co/sumitdotml/lora-and-friends&quot;&gt;sumitdotml/lora-and-friends&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;dataset: &lt;a href=&quot;https://huggingface.co/datasets/sumitdotml/lora-and-friends-dataset&quot;&gt;sumitdotml/lora-and-friends-dataset&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2 id=&quot;1-before-the-run&quot;&gt;1. Before The Run&lt;/h2&gt;
-&lt;h3 id=&quot;2026-04-19-the-first-plan-had-too-many-moving-parts&quot;&gt;2026-04-19: the first plan had too many moving parts&lt;/h3&gt;
-&lt;p&gt;I started with too many possible experiments in the air: full fine-tuning, MoE, RL, transfer evaluation, Tinker defaults, LoRA target modules, dataset choice, benchmark choice, and budget. That was not a runnable project but a pile of directions.&lt;/p&gt;
-&lt;p&gt;I removed most of it. Phase one became:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;one model: &lt;code&gt;Qwen3-8B&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;one task family: math reasoning&lt;/li&gt;
-&lt;li&gt;one final benchmark anchor: &lt;code&gt;GSM8K&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;one supervised fine-tuning comparison: attention-only LoRA vs all-layer LoRA&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;I kept &lt;code&gt;Qwen3-8B&lt;/code&gt; as the working model. &lt;code&gt;Qwen3-8B-Base&lt;/code&gt; stayed in reserve for a different post-training story, and a smaller future model would have added a model-choice variable that I did not want in the first comparison.&lt;/p&gt;
-&lt;p&gt;The target-module comparison was the part I wanted to isolate:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th&gt;intended adapter scope&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td&gt;attention projections&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;attention and MLP projections&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;That meant everything else had to become boring on purpose: same base model, same data, same rank, same training schedule, same evaluation prompt, same answer extraction, same benchmark, and same checkpoint-selection rule.&lt;/p&gt;
-&lt;h3 id=&quot;why-gsm8k-became-the-benchmark-not-the-main-training-set&quot;&gt;Why GSM8K became the benchmark, not the main training set&lt;/h3&gt;
-&lt;p&gt;&lt;code&gt;GSM8K&lt;/code&gt; was tempting as a training source because it is clean and familiar. But the train split has only &lt;code&gt;7,473&lt;/code&gt; rows, and the test split has &lt;code&gt;1,319&lt;/code&gt; rows. I wanted the final score to be held out and easy to explain, so I kept GSM8K as the benchmark anchor.&lt;/p&gt;
-&lt;p&gt;The training source moved to &lt;code&gt;nvidia/OpenMathInstruct-2&lt;/code&gt;, especially the &lt;code&gt;train_1M&lt;/code&gt; split. The schema was simple enough to render into chat format:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;problem&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;Solve for $y$:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\n\n&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;$$&lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;frac{y^2 - 3y + 2}{y - 2} = y + 1$$&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;generated_solution&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;... &lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;[ y = &lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;boxed{2} &lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;]&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;expected_answer&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;2&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;problem_source&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;augmented_math&amp;quot;&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I also looked at &lt;code&gt;unsloth/OpenMathReasoning-mini&lt;/code&gt;. It had more character and much longer traces, but the token profile made it harder to fit into the budget. &lt;code&gt;OpenMathInstruct-2&lt;/code&gt; looked less exciting, but it had the right shape for a controlled SFT comparison.&lt;/p&gt;
-&lt;p&gt;The first sizing pass made the budget concrete. A 500-row tokenizer sample from OpenMathInstruct-2 averaged &lt;code&gt;456.9&lt;/code&gt; rendered tokens per example, with &lt;code&gt;p90 = 813&lt;/code&gt; and &lt;code&gt;p95 = 963&lt;/code&gt;. At Tinker’s then-current &lt;code&gt;Qwen3-8B&lt;/code&gt; training price of &lt;code&gt;$0.40 / M&lt;/code&gt; tokens, a 30k-example run started to look feasible.&lt;/p&gt;
-&lt;p&gt;The first target was a mildly balanced 30k dataset:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;30k working raw dataset&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- 21,000  augmented_math&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;-  7,000  augmented_gsm8k&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;-  1,000  math&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;-  1,000  gsm8k&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The first plan did not survive.&lt;/p&gt;
-&lt;h3 id=&quot;the-first-run-sheet-was-useful-even-though-it-was-wrong&quot;&gt;The first run sheet was useful even though it was wrong&lt;/h3&gt;
-&lt;p&gt;The first run sheet had a training split of &lt;code&gt;27,000&lt;/code&gt; rows and a validation split of &lt;code&gt;3,000&lt;/code&gt; rows. With the early weighted mean estimate, that came out to about &lt;code&gt;11.70M&lt;/code&gt; train tokens per epoch and about &lt;code&gt;$4.68&lt;/code&gt; per epoch.&lt;/p&gt;
-&lt;p&gt;The pilot shape was also already there:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;pilot sweep&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- train rows: 5,000&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- val rows:     500&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- 2 conditions x 3 LR values x 1 seed x 1 epoch&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;And the main comparison shape was visible:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;thesis comparison&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- 2 conditions x 3 seeds x 2 epochs&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- total train cost: about $56.17&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Those numbers were later superseded, but they were still useful. They forced me to think in runs, seeds, rows, tokens, and dollars instead of treating “fine-tune a model” as one vague action.&lt;/p&gt;
-&lt;p&gt;The benchmark side looked cheap in comparison. One full GSM8K eval was estimated around cents, not dollars of training cost. So from the beginning, training data and training schedule were the real budget levers.&lt;/p&gt;
-&lt;h2 id=&quot;2-before-training&quot;&gt;2. Before Training&lt;/h2&gt;
-&lt;h3 id=&quot;2026-04-20-the-first-dataset-looked-usable-until-i-read-it&quot;&gt;2026-04-20: the first dataset looked usable until I read it&lt;/h3&gt;
-&lt;p&gt;The initial &lt;code&gt;openmath_30k&lt;/code&gt; artifacts matched the recipe exactly: &lt;code&gt;27,000&lt;/code&gt; train rows and &lt;code&gt;3,000&lt;/code&gt; validation rows. Structurally it looked clean. Every inspected training row had a final &lt;code&gt;\boxed{...}&lt;/code&gt; answer. The first rendered dataset under &lt;code&gt;qwen3_disable_thinking&lt;/code&gt; also looked reasonable.&lt;/p&gt;
-&lt;p&gt;Then the manual audit started doing its job.&lt;/p&gt;
-&lt;p&gt;One sampled &lt;code&gt;augmented_gsm8k&lt;/code&gt; row reasoned itself into clipping a percentage answer to &lt;code&gt;100&lt;/code&gt; because a fictional budget was too small. A tetrahedron row noticed a fractional tetrahedron count was impossible and still pushed through to a final ratio. A pattern search found disclaimer-like repair language:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;cannot spend more than she has&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;doesn&amp;#39;t align with the logical outcome&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;we need to set the value to 100&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;At first I treated this as a light cleanup problem. I removed a couple of flagged rows, built filtered artifacts, and added manual review packs. The mismatch count fell, the obvious bad rows got smaller, and the dataset felt closer.&lt;/p&gt;
-&lt;p&gt;But each pass exposed another class of issue.&lt;/p&gt;
-&lt;h3 id=&quot;the-augmented-branch-kept-asking-for-another-pass&quot;&gt;The augmented branch kept asking for another pass&lt;/h3&gt;
-&lt;p&gt;The suspicious rows were concentrated in the augmented sources. The failures were not all the same, but they had a family resemblance: impossible integer counts, prompt-generation residue, unsupported case-bashing, and answers that looked right only because the generated reasoning had quietly changed the problem.&lt;/p&gt;
-&lt;p&gt;The review packs were small enough to inspect but large enough to change my mind. A &lt;code&gt;53&lt;/code&gt;-row suspicious train pack for &lt;code&gt;curated_v2&lt;/code&gt; produced &lt;code&gt;29&lt;/code&gt; removals. A later &lt;code&gt;61&lt;/code&gt;-row suspicious train pack produced &lt;code&gt;30&lt;/code&gt; hard removals, all from &lt;code&gt;augmented_math&lt;/code&gt;. These were not tiny formatting mismatches but rows with broken reasoning, contaminated prompts, or invalid proofs.&lt;/p&gt;
-&lt;p&gt;The curation sequence became longer than I wanted:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;curated_v2&lt;/code&gt;: after the first train and validation suspicious-row removals&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;curated_v3&lt;/code&gt;: after another suspicious train review&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;curated_v4&lt;/code&gt;: after validation cleanup&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;curated_v5&lt;/code&gt;: after backfilling weak &lt;code&gt;augmented_math&lt;/code&gt; rows&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;curated_v6&lt;/code&gt;: after removing prompt-generation debris like &lt;code&gt;A new problem:&lt;/code&gt; and &lt;code&gt;The new problem is:&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;One excerpt from the log captures the real issue:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;The problem was no longer &amp;quot;find one more regex,&amp;quot;&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;it was &amp;quot;stop trusting augmented_math as the backbone of the dataset.&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;At that point I stopped trying to rescue the 30k augmented-heavy recipe. If the dataset takes repeated repair passes and still produces obvious bad rows in random review, then it stops being a clean experimental input and becomes the experiment itself.&lt;/p&gt;
-&lt;p&gt;I did not want the final write-up to be “attention-only LoRA versus all-layer LoRA, but also maybe the augmented data had hidden garbage.” That would have made every downstream result harder to trust.&lt;/p&gt;
-&lt;h3 id=&quot;2026-04-20-to-2026-04-21-i-rebuilt-around-original-rows-only&quot;&gt;2026-04-20 to 2026-04-21: I rebuilt around original rows only&lt;/h3&gt;
-&lt;p&gt;&lt;code&gt;OpenMathInstruct-2 train_1M&lt;/code&gt; had &lt;code&gt;29,468&lt;/code&gt; original-source rows across &lt;code&gt;gsm8k&lt;/code&gt; and &lt;code&gt;math&lt;/code&gt;. After the strict gate, &lt;code&gt;28,166&lt;/code&gt; survived cleanly enough to build a new candidate.&lt;/p&gt;
-&lt;p&gt;The accepted source counts were:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;gsm8k&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 14618&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;math&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 13548&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The original-only dataset was smaller than the 30k target, but the quality profile was much better. It cleared the automatic checks that the augmented branch kept failing:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;boxed-match rate, train: &lt;code&gt;1.0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;boxed-match rate, validation: &lt;code&gt;1.0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;suspicious rows, train: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;suspicious rows, validation: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;prompt-wrapper contamination hits, train: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;prompt-wrapper contamination hits, validation: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;I froze this path as &lt;code&gt;openmath_original_clean&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;After a later split repair, the final retained manifest became:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;split&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;&lt;code&gt;gsm8k&lt;/code&gt; source rows&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;&lt;code&gt;math&lt;/code&gt; source rows&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;total&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;train&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;13,145&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;12,203&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,348&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;validation&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1,473&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1,345&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,818&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;The old &lt;code&gt;openmath_30k*&lt;/code&gt; lineage was retired after that. I wanted one clear dataset path in the repo, not a dozen stale artifact branches that future-me or another agent might accidentally treat as active.&lt;/p&gt;
-&lt;h3 id=&quot;2026-04-21-i-kept-the-system-prompt&quot;&gt;2026-04-21: I kept the system prompt&lt;/h3&gt;
-&lt;p&gt;The render sanity check compared the frozen dataset with and without the system prompt under the actual &lt;code&gt;Qwen/Qwen3-8B&lt;/code&gt; chat template. The prompt added a constant &lt;code&gt;27&lt;/code&gt; tokens per example.&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;full_mean_with_system&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 340.25&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;full_mean_without_system&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 313.25&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;full_mean_delta&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 27.0&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;That overhead was small enough to keep. More importantly, the prompt made the output contract explicit:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;You are a careful math solver. Solve the problem step by step. Put the final answer in \boxed{}.&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I kept it because the raw problems themselves do not always carry the boxed-answer instruction. I also wanted training and evaluation to mirror each other as closely as possible.&lt;/p&gt;
-&lt;h2 id=&quot;3-contracts-and-sanity-checks&quot;&gt;3. Contracts And Sanity Checks&lt;/h2&gt;
-&lt;h3 id=&quot;2026-04-22-i-stopped-relying-on-memory&quot;&gt;2026-04-22: I stopped relying on memory&lt;/h3&gt;
-&lt;p&gt;Once the dataset path was stable, the next risk was format drift. It is easy to train with one prompt, evaluate with another, parse answers a third way, and then accidentally report a prompt experiment as a model experiment.&lt;/p&gt;
-&lt;p&gt;So I wrote the contracts down before the final result existed.&lt;/p&gt;
-&lt;p&gt;I also had to clean up the planning docs. Some TODO labels were too compressed. A label like “contamination check” made sense to me while I was in the middle of the work, but it hid the actual operation: compare training-side &lt;code&gt;gsm8k&lt;/code&gt; problem text against held-out GSM8K test questions after canonical normalization, then block training if overlap is greater than zero.&lt;/p&gt;
-&lt;p&gt;So I added an execution-clarity rule for the project: open tasks needed to say what the action was, why it mattered, what counted as done, and what happened if it failed. It sounds procedural, but it kept the later runbook from turning into shorthand only I could decode.&lt;/p&gt;
-&lt;p&gt;The evaluation contract froze:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;the same system prompt as training&lt;/li&gt;
-&lt;li&gt;greedy decoding with &lt;code&gt;temperature = 0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;enable_thinking=False&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;max_new_tokens = 512&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;no custom stop tokens&lt;/li&gt;
-&lt;li&gt;boxed-answer extraction only&lt;/li&gt;
-&lt;li&gt;exact match after normalization&lt;/li&gt;
-&lt;li&gt;the contamination report path&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The contamination check was a gate, not a note. If training-side &lt;code&gt;gsm8k&lt;/code&gt; rows overlapped the GSM8K test questions, the benchmark had to change or the dataset had to be rebuilt.&lt;/p&gt;
-&lt;p&gt;The result schema was frozen around retained JSONL output under &lt;code&gt;artifacts/results/&amp;lt;run_id&amp;gt;/&lt;/code&gt;. It also kept &lt;code&gt;token_count&lt;/code&gt; and &lt;code&gt;cost&lt;/code&gt; in the canonical schema even when those values were &lt;code&gt;null&lt;/code&gt;, because I did not want the schema to change later just because telemetry became available.&lt;/p&gt;
-&lt;p&gt;I also standardized on the word &lt;code&gt;condition&lt;/code&gt; for the comparison label, which sounds minor but made later artifacts easier to read:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;condition&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;attention_only&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;seed&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;step&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 3169&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;h3 id=&quot;2026-05-03-the-dataset-split-still-had-a-hidden-problem&quot;&gt;2026-05-03: the dataset split still had a hidden problem&lt;/h3&gt;
-&lt;p&gt;When I ran the dataset-integrity gate, the benchmark side passed. The training-side &lt;code&gt;gsm8k&lt;/code&gt; rows had &lt;code&gt;0&lt;/code&gt; overlap with the &lt;code&gt;openai/gsm8k&lt;/code&gt; test split.&lt;/p&gt;
-&lt;p&gt;But the local train/validation split failed a different check. OpenMath can include multiple accepted solutions for the same underlying problem. The original builder had split rows independently, so variants of the same problem could land on both sides.&lt;/p&gt;
-&lt;p&gt;That would make validation loss too friendly. It would also make checkpoint or LR decisions look cleaner than they were.&lt;/p&gt;
-&lt;p&gt;The fix was to group by canonical problem text before splitting. The retained report after the rebuild says:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;status&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;pass&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;overlap_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_val_overlap&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;row_id_overlap_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;problem_text_overlap_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;overlapped_val_row_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	}&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The final contamination report compared &lt;code&gt;13,145&lt;/code&gt; training rows with &lt;code&gt;source == &amp;quot;gsm8k&amp;quot;&lt;/code&gt; against &lt;code&gt;1,319&lt;/code&gt; GSM8K test questions. It found &lt;code&gt;overlap_count = 0&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;The raw files were not enough on their own, and the split rule mattered.&lt;/p&gt;
-&lt;h3 id=&quot;2026-05-04-the-dataset-went-to-hugging-face&quot;&gt;2026-05-04: the dataset went to Hugging Face&lt;/h3&gt;
-&lt;p&gt;After the repaired split, the frozen dataset payloads were published to &lt;code&gt;sumitdotml/lora-and-friends-dataset&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;The local repo kept scripts, manifests, checksums, and audit evidence. The Hub repo carried the payloads:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;payload&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;rows&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;bytes&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;raw train&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,348&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,528,287&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;raw validation&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,818&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,787,397&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;rendered train&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,348&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;29,989,535&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;rendered validation&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,818&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3,283,365&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;At this point I had a real dataset, a render path, an evaluation contract, and a contamination gate. I still did not know whether the training path would work.&lt;/p&gt;
-&lt;h2 id=&quot;4-first-tinker-check&quot;&gt;4. First Tinker Check&lt;/h2&gt;
-&lt;h3 id=&quot;2026-05-04-the-first-backend-check-caught-a-renderer-trap&quot;&gt;2026-05-04: the first backend check caught a renderer trap&lt;/h3&gt;
-&lt;p&gt;The first Tinker smoke pass was supposed to be boring. It was one of the smallest checks in the whole project: can Tinker accept &lt;code&gt;Qwen/Qwen3-8B&lt;/code&gt;, rank &lt;code&gt;8&lt;/code&gt;, and the two LoRA condition switches?&lt;/p&gt;
-&lt;p&gt;The Tinker cookbook &lt;code&gt;qwen3_disable_thinking&lt;/code&gt; renderer was correct for generation prompts, but its supervised-training path did not match the frozen SFT render contract. The project contract was the Hugging Face chat template with &lt;code&gt;enable_thinking=False&lt;/code&gt;, which renders an empty thinking block before the assistant answer:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;&amp;lt;think&amp;gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;&amp;lt;/think&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I changed the smoke runner so Tinker datums came from &lt;code&gt;AutoTokenizer.apply_chat_template(..., enable_thinking=False)&lt;/code&gt;, then masked loss only after the rendered prompt prefix.&lt;/p&gt;
-&lt;p&gt;The retained smoke pass then gave me enough to lock the adapter defaults:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;train rows in smoke&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;optimizer steps&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;validation NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1.5048651695251465&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;8&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1.4733978509902954&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;Tinker accepted:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;attention_only&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_attn&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_mlp&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; false&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_unembed&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; false&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	},&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;all_layer&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt; {&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_attn&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_mlp&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_unembed&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; false&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	}&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The public Tinker API did not expose local &lt;code&gt;lora_alpha&lt;/code&gt; or &lt;code&gt;lora_dropout&lt;/code&gt; fields through this training path. I recorded those as backend-owned instead of pretending the runner controlled them.&lt;/p&gt;
-&lt;p&gt;There was one more small backend detail in the log: the first smoke attempt printed that the Tinker SDK version was outdated. I upgraded to &lt;code&gt;tinker==0.18.2&lt;/code&gt;, reran the smoke pass, and the warning did not reappear. Backend version drift becomes hard to reconstruct later, so I kept the note.&lt;/p&gt;
-&lt;p&gt;The smoke pass also created checkpoint paths with a seven-day TTL. That did not matter for the final result yet, but it foreshadowed the export urgency after the main sweep.&lt;/p&gt;
-&lt;h3 id=&quot;2026-05-05-i-ran-the-untouched-baseline-before-touching-lora&quot;&gt;2026-05-05: I ran the untouched baseline before touching LoRA&lt;/h3&gt;
-&lt;p&gt;The baseline was &lt;code&gt;Qwen/Qwen3-8B&lt;/code&gt; on &lt;code&gt;openai/gsm8k&lt;/code&gt;, config &lt;code&gt;main&lt;/code&gt;, split &lt;code&gt;test&lt;/code&gt;, with &lt;code&gt;enable_thinking=false&lt;/code&gt;, &lt;code&gt;temperature=0&lt;/code&gt;, and &lt;code&gt;max_new_tokens=512&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;The retained baseline run was:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;artifacts/results/baseline-qwen3-8b-gsm8k-001/&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;It scored:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;examples: &lt;code&gt;1,319&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;correct: &lt;code&gt;1,115&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;accuracy: &lt;code&gt;0.8453373768006065&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;extraction failures: &lt;code&gt;31&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;total eval tokens: &lt;code&gt;505,694&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;I wanted this number before LR selection and before the main comparison. Otherwise, the final LoRA scores would float without a reference.&lt;/p&gt;
-&lt;h2 id=&quot;5-learning-rate-and-batch-shape&quot;&gt;5. Learning Rate And Batch Shape&lt;/h2&gt;
-&lt;h3 id=&quot;2026-05-06-the-lr-selection-plan-was-too-slow&quot;&gt;2026-05-06: the LR-selection plan was too slow&lt;/h3&gt;
-&lt;p&gt;The first LR-selection protocol used &lt;code&gt;5,000&lt;/code&gt; train rows and &lt;code&gt;500&lt;/code&gt; validation rows. On paper it was reasonable. In practice it projected to roughly &lt;code&gt;20&lt;/code&gt; hours for the six-run sweep on Tinker.&lt;/p&gt;
-&lt;p&gt;I rescaled it to a deterministic slice:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;first &lt;code&gt;512&lt;/code&gt; train rows&lt;/li&gt;
-&lt;li&gt;first &lt;code&gt;128&lt;/code&gt; validation rows&lt;/li&gt;
-&lt;li&gt;seed &lt;code&gt;7&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;LR grid: &lt;code&gt;1e-4&lt;/code&gt;, &lt;code&gt;3e-4&lt;/code&gt;, &lt;code&gt;1e-3&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;two conditions&lt;/li&gt;
-&lt;li&gt;one epoch&lt;/li&gt;
-&lt;li&gt;effective batch size &lt;code&gt;8&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The narrow purpose was to choose a peak LR per condition, not to run a final benchmark or a condition comparison.&lt;/p&gt;
-&lt;p&gt;The selected LR was &lt;code&gt;3e-4&lt;/code&gt; for both:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;LR&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;best validation NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3786645046540731&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3632619345728878&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3644437038722405&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3648794147648033&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3559855057286731&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.37397296784836664&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;I kept seed &lt;code&gt;7&lt;/code&gt; reserved for selection work so the main comparison seeds could be &lt;code&gt;0&lt;/code&gt;, &lt;code&gt;1&lt;/code&gt;, and &lt;code&gt;2&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;The LR-selection runner also caught a plain implementation bug before the expensive runs. I had assumed Tinker cookbook datum weights were raw torch tensors. They were &lt;code&gt;TensorData&lt;/code&gt; objects. The live one-step probe failed, the runner got fixed, and that mistake went into &lt;code&gt;AGENT_MISTAKES.md&lt;/code&gt;. The final result depends on the boring part where a runner can survive a one-step live probe before it is trusted for a sweep.&lt;/p&gt;
-&lt;p&gt;I also split the training helper code into smaller modules:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;training/common.py&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;training/sft.py&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;training/lora.py&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The runnable scripts stayed separate: one for the smoke pass, one for LR selection, and later one for the main training sweep. This kept the orchestration scripts readable enough that I could still inspect what was being frozen.&lt;/p&gt;
-&lt;h3 id=&quot;2026-05-07-speed-was-tempting-but-batch-size-was-not-free&quot;&gt;2026-05-07: speed was tempting, but batch size was not free&lt;/h3&gt;
-&lt;p&gt;The initial runner shape used eight one-datum train requests before each optimizer step. A throughput probe showed that request shape mattered a lot at the same effective batch size:&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_08_throughput_probe.CqeELwHK_1tclPb.webp&quot; alt=&quot;Throughput by request shape&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;1851&quot; height=&quot;1100&quot;&gt;&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;request shape&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;seconds per optimizer step&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;single_datum_calls&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;20.22187466151081&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;batched_datums&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;5.201307859155349&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;batched_datums_pipelined&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2.4104866901249693&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;The fast version, &lt;code&gt;batched_datums_pipelined&lt;/code&gt;, submits one batched &lt;code&gt;forward_backward_async(...)&lt;/code&gt; request and queues the optimizer request before waiting. That kept the nominal effective batch size at &lt;code&gt;8&lt;/code&gt;; it only changed how the same batch was sent to Tinker.&lt;/p&gt;
-&lt;p&gt;Then larger batches looked tempting. Batch &lt;code&gt;512&lt;/code&gt; and &lt;code&gt;1024&lt;/code&gt; were much faster in throughput probes. But batch size is a real hyperparameter for LoRA, so I made the larger-batch path earn its way in by validation NLL, and it did not.&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th&gt;selected batch/LR&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;selected NLL&lt;/th&gt;&lt;th&gt;best larger-batch candidate&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;candidate NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td&gt;batch 8, &lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3632619345728878&lt;/td&gt;&lt;td&gt;batch 512, &lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.37616809419132946&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;batch 8, &lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3559855057286731&lt;/td&gt;&lt;td&gt;batch 512, &lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3569802998485914&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;So the main run kept effective batch size &lt;code&gt;8&lt;/code&gt;, used the pipelined request shape, and kept the final partial batch of &lt;code&gt;4&lt;/code&gt; rows rather than wrapping around and duplicating examples. The fast path was real, but it was only allowed to change operations, not silently change the scientific comparison.&lt;/p&gt;
-&lt;h2 id=&quot;6-the-six-runs&quot;&gt;6. The Six Runs&lt;/h2&gt;
-&lt;h3 id=&quot;2026-05-08-main-001-started&quot;&gt;2026-05-08: &lt;code&gt;main-001&lt;/code&gt; started&lt;/h3&gt;
-&lt;p&gt;The main run expanded to six sequential condition/seed runs:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;main-001-attention_only-seed-0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;main-001-attention_only-seed-1&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;main-001-attention_only-seed-2&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;main-001-all_layer-seed-0&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;main-001-all_layer-seed-1&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;main-001-all_layer-seed-2&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The launch command was:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;uv run training/run_main_training.py --run-prefix main-001&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Each run used:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;train rows: &lt;code&gt;25,348&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;validation rows: &lt;code&gt;2,818&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;epochs: &lt;code&gt;2&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;effective batch size: &lt;code&gt;8&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;optimizer steps per epoch: &lt;code&gt;3,169&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;total optimizer steps: &lt;code&gt;6,338&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;warmup steps: &lt;code&gt;190&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;peak LR: &lt;code&gt;3e-4&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;min LR: &lt;code&gt;3e-5&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The validation/checkpoint cadence was &lt;code&gt;1000&lt;/code&gt;, &lt;code&gt;2000&lt;/code&gt;, &lt;code&gt;3169&lt;/code&gt;, &lt;code&gt;4000&lt;/code&gt;, &lt;code&gt;5000&lt;/code&gt;, &lt;code&gt;6000&lt;/code&gt;, and &lt;code&gt;6338&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;I monitored this like a long-running job, because it was one. The raw log has many repeated entries that look boring at first glance:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;validation step=1000 nll=...&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;validation step=2000 nll=...&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;validation step=3169 nll=...&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;...&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Those entries showed that the run was still alive, that validation/checkpoint blocks resumed correctly, and that every retained checkpoint path was read from the active run rather than guessed from a sibling run.&lt;/p&gt;
-&lt;p&gt;I had already made that mistake once while logging a checkpoint URL by analogy from a sibling run. The fix was simple: read the exact checkpoint string from the active run’s &lt;code&gt;metrics.jsonl&lt;/code&gt; or summary before writing it down. After that, I treated checkpoint paths as evidence, not as strings I could reconstruct from memory.&lt;/p&gt;
-&lt;h3 id=&quot;step-3169-kept-showing-up&quot;&gt;Step 3169 kept showing up&lt;/h3&gt;
-&lt;p&gt;The first attention-only seed hit:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;main-001-attention_only-seed-0: validation step=3169 nll=0.336164&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Its final summary selected step &lt;code&gt;3169&lt;/code&gt;, not the final step &lt;code&gt;6338&lt;/code&gt;:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;selected best validation step: 3169&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;selected validation_mean_nll: 0.33616363178874076&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Then seed &lt;code&gt;1&lt;/code&gt; selected step &lt;code&gt;3169&lt;/code&gt;, then seed &lt;code&gt;2&lt;/code&gt;, then all-layer seed &lt;code&gt;0&lt;/code&gt;, then all-layer seed &lt;code&gt;1&lt;/code&gt;, then all-layer seed &lt;code&gt;2&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;At the end, every run selected the one-epoch boundary:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;run&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;selected step&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;validation NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-attention_only-seed-0&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33616363178874076&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-attention_only-seed-1&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33621202263413363&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-attention_only-seed-2&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33651007850933906&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-all_layer-seed-0&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33611938013674597&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-all_layer-seed-1&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33655583715915666&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-all_layer-seed-2&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33634131648081267&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_05_validation_nll_diagnostic.pUHefRY0_2aPbOO.webp&quot; alt=&quot;Validation NLL by training step&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;1911&quot; height=&quot;1158&quot;&gt;&lt;/p&gt;
-&lt;p&gt;The selected NLL means were close:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;attention_only&lt;/code&gt;: &lt;code&gt;0.3362952443107378&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;all_layer&lt;/code&gt;: &lt;code&gt;0.3363388445922384&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;But the post-3169 behavior was different. Attention-only stayed near the selected NLL. All-layer jumped more sharply after the one-epoch boundary; at step &lt;code&gt;4000&lt;/code&gt;, all-layer mean NLL was &lt;code&gt;0.3457733619534809&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;I did not treat that as the final result though; it was a training diagnostic, and the actual comparison still had to come from GSM8K.&lt;/p&gt;
-&lt;p&gt;For all-layer seed &lt;code&gt;1&lt;/code&gt;, the NLL moved from &lt;code&gt;0.33655583715915666&lt;/code&gt; at step &lt;code&gt;3169&lt;/code&gt; to &lt;code&gt;0.34549824556309505&lt;/code&gt; at step &lt;code&gt;4000&lt;/code&gt;. For all-layer seed &lt;code&gt;2&lt;/code&gt;, it moved from &lt;code&gt;0.33634131648081267&lt;/code&gt; to &lt;code&gt;0.3461580484910246&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;The lowest-NLL checkpoint rule prevented later checkpoints from becoming attractive simply because they were later or because the run had continued longer.&lt;/p&gt;
-&lt;h3 id=&quot;the-sweep-finished-with-six-pass-summaries&quot;&gt;The sweep finished with six pass summaries&lt;/h3&gt;
-&lt;p&gt;The final all-layer seed completed on 2026-05-09. The log entry was satisfying because the sweep had finally become a finite object:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;completion artifacts now exist in artifacts/results/main-001-all_layer-seed-2/:&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;manifest.json, metrics.jsonl, sample_render.txt, summary.json&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;Each of the six selected checkpoints had a seven-day Tinker TTL, so the next step was urgent enough: export the selected checkpoint states into something that could be evaluated and published.&lt;/p&gt;
-&lt;h2 id=&quot;7-checkpoint-export&quot;&gt;7. Checkpoint Export&lt;/h2&gt;
-&lt;h3 id=&quot;2026-05-09-training-weights-were-not-sampler-weights&quot;&gt;2026-05-09: training weights were not sampler weights&lt;/h3&gt;
-&lt;p&gt;The selected training checkpoints used &lt;code&gt;weights/...&lt;/code&gt; paths. I initially wanted to use those directly for publication/evaluation, but the sampling client rejected that shape.&lt;/p&gt;
-&lt;p&gt;The actual server response was:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;tinker.BadRequestError: Error code: 400 - {&amp;#39;detail&amp;#39;: &amp;#39;model_path must point to a sampler_weights checkpoint, got weights&amp;#39;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;So the selected training state checkpoints had to be converted to sampler-format weights before any evaluation could run.&lt;/p&gt;
-&lt;p&gt;The working export path was:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;load_state_async(training_checkpoint_path)&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;save_weights_for_sampler_async(export_name)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The six sampler checkpoint URIs then looked like:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;tinker://.../sampler_weights/export-main-001-attention_only-seed-0-step-3169&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;tinker://.../sampler_weights/export-main-001-all_layer-seed-2-step-3169&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;After that, the converted adapters were uploaded to the Hugging Face model repo. The published layout is:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;checkpoints/best-checkpoints/attention_only/seed-{0,1,2}/step-3169/&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;checkpoints/best-checkpoints/all_layer/seed-{0,1,2}/step-3169/&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;The sampler weights also made the adapter-size difference concrete. The attention-only sampler exports were about &lt;code&gt;30.8M&lt;/code&gt; bytes each in the Tinker checkpoint listing, while the all-layer sampler exports were about &lt;code&gt;87.5M&lt;/code&gt; bytes each. That was expected from the larger adapter scope, but it was useful to see it in the retained checkpoint metadata rather than only as intuition.&lt;/p&gt;
-&lt;h2 id=&quot;8-gsm8k-evaluation&quot;&gt;8. GSM8K Evaluation&lt;/h2&gt;
-&lt;h3 id=&quot;2026-05-10-the-evaluation-runner-needed-checkpoint-awareness&quot;&gt;2026-05-10: the evaluation runner needed checkpoint awareness&lt;/h3&gt;
-&lt;p&gt;The baseline path already existed, but checkpoint evaluation needed more safeguards. I added support for:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;--checkpoint-path&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;explicit &lt;code&gt;--seed&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;explicit &lt;code&gt;--condition&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;a run-id slug that would not collide when checkpoint paths ended similarly&lt;/li&gt;
-&lt;li&gt;step parsing only from literal &lt;code&gt;step-&amp;lt;digits&amp;gt;&lt;/code&gt; tokens&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;I also made the argument validation fail fast if a checkpoint path was passed without condition or seed. I did not want a LoRA checkpoint quietly defaulting to &lt;code&gt;base&lt;/code&gt;.&lt;/p&gt;
-&lt;p&gt;Before launching the full sweep, I ran a one-example probe with &lt;code&gt;attention_only&lt;/code&gt; seed &lt;code&gt;0&lt;/code&gt;. It returned &lt;code&gt;1/1&lt;/code&gt; correct and confirmed the full path:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;sampler URI -&amp;gt; tokenizer -&amp;gt; Tinker sample -&amp;gt; boxed-answer extraction -&amp;gt; scoring -&amp;gt; retained artifacts&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;h3 id=&quot;the-six-eval-runs&quot;&gt;The six eval runs&lt;/h3&gt;
-&lt;p&gt;The full sweep ran at &lt;code&gt;--concurrency 16&lt;/code&gt;, no limit, against the six selected sampler checkpoints.&lt;/p&gt;
-&lt;p&gt;The baseline stayed:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;accuracy: &lt;code&gt;0.8453373768006065&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;correct: &lt;code&gt;1115/1319&lt;/code&gt;&lt;/li&gt;
-&lt;li&gt;extraction failures: &lt;code&gt;31&lt;/code&gt;&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The six LoRA eval runs were:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;seed&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;accuracy&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;correct / total&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;extraction failures&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9044730856709629&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1193 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;6&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9067475360121304&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1196 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9052312357846853&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1194 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;5&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.8991660348749052&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1186 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;5&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9021986353297953&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1190 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;4&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9014404852160728&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1189 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;8&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;Aggregated by condition:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;mean accuracy&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;min&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;max&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;range&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9054839524892596&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9044730856709629&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9067475360121304&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.0022744503411676&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9009350518069245&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.8991660348749052&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9021986353297953&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.0030326004548901&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_03_gsm8k_accuracy_chart.CjTnoPdB_Z1BQOLT.webp&quot; alt=&quot;GSM8K accuracy by condition&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;1820&quot; height=&quot;1187&quot;&gt;&lt;/p&gt;
-&lt;p&gt;The mean gap was &lt;code&gt;0.0045489006823352&lt;/code&gt;, or about &lt;code&gt;0.455&lt;/code&gt; percentage points, in favor of attention-only. Under the frozen rule, that is below the &lt;code&gt;0.01&lt;/code&gt; threshold for a winner claim. So the honest reading is local: attention-only ended higher in this run set and used a smaller adapter, but the result stays inside the pre-declared inconclusive band.&lt;/p&gt;
-&lt;h3 id=&quot;the-disagreement-view-made-the-result-easier-to-read&quot;&gt;The disagreement view made the result easier to read&lt;/h3&gt;
-&lt;p&gt;The net accuracy chart showed the final result, but the disagreement chart explained its shape better.&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_04_paired_seed_slope.ClcugjqE_ZovFPs.webp&quot; alt=&quot;Per-seed prediction disagreement on GSM8K&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;2511&quot; height=&quot;1253&quot;&gt;&lt;/p&gt;
-&lt;p&gt;For paired seeds:&lt;/p&gt;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align:right&quot;&gt;seed&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;attention-only only&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;all-layer only&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;both correct&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;both wrong&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;delta&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td style=&quot;text-align:right&quot;&gt;0&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;54&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;47&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1139&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;79&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;+7&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;49&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;43&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1147&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;80&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;+6&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;46&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;41&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1148&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;84&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;+5&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
-&lt;p&gt;The two conditions mostly agree, with the difference coming from a narrow band of examples where attention-only is correct slightly more often than the reverse.&lt;/p&gt;
-&lt;h2 id=&quot;9-figures-and-cleanup&quot;&gt;9. Figures And Cleanup&lt;/h2&gt;
-&lt;h3 id=&quot;2026-05-10-the-figure-pass-changed-how-i-told-the-result&quot;&gt;2026-05-10: the figure pass changed how I told the result&lt;/h3&gt;
-&lt;p&gt;The figure pipeline produced eight retained artifacts. This worklog uses four of them:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;fig_03&lt;/code&gt;: GSM8K accuracy by condition&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;fig_04&lt;/code&gt;: per-seed prediction disagreement&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;fig_05&lt;/code&gt;: validation NLL by training step&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;fig_08&lt;/code&gt;: throughput by request shape&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The figure pass forced me to separate claims that were getting blurred together:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;validation NLL explains checkpoint selection&lt;/li&gt;
-&lt;li&gt;GSM8K accuracy explains benchmark performance&lt;/li&gt;
-&lt;li&gt;prediction disagreement explains the narrow accuracy gap&lt;/li&gt;
-&lt;li&gt;throughput explains an operational runner choice&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The fig_04 design took the most iteration. The original idea was a slope/delta view showing net correct-count deltas of &lt;code&gt;+7&lt;/code&gt;, &lt;code&gt;+6&lt;/code&gt;, and &lt;code&gt;+5&lt;/code&gt;. It kept reading like a progression over time or a tiny effect exaggerated by the axis.&lt;/p&gt;
-&lt;p&gt;The raw log records several rejected forms: vertical slope, leader labels, corner text boxes, horizontal dumbbell, vertical paired columns, and delta-only bars. The recurring problem was that the visual form was louder than the claim. A &lt;code&gt;0.4&lt;/code&gt; to &lt;code&gt;0.5&lt;/code&gt; percentage-point gap should not be drawn like a dramatic swing.&lt;/p&gt;
-&lt;p&gt;The final chart became per-seed disagreement small multiples. That matched the actual question better: where do the two conditions disagree?&lt;/p&gt;
-&lt;p&gt;The log records the final contingency numbers before implementation:&lt;/p&gt;
-&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;seed 0: attention_only_only=54, all_layer_only=47, both_correct=1139, both_wrong=79&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;seed 1: attention_only_only=49, all_layer_only=43, both_correct=1147, both_wrong=80&lt;/span&gt;&lt;/span&gt;
-&lt;span class=&quot;line&quot;&gt;&lt;span&gt;seed 2: attention_only_only=46, all_layer_only=41, both_correct=1148, both_wrong=84&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
-&lt;p&gt;I kept the filename as &lt;code&gt;fig_04_paired_seed_slope&lt;/code&gt; so existing artifact paths did not move, but the chart itself became the disagreement view.&lt;/p&gt;
-&lt;h3 id=&quot;the-cleanup-rule&quot;&gt;The cleanup rule&lt;/h3&gt;
-&lt;p&gt;The result can say:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;both LoRA conditions improved over the untouched baseline on GSM8K&lt;/li&gt;
-&lt;li&gt;attention-only had the higher three-seed mean in this retained run set&lt;/li&gt;
-&lt;li&gt;attention-only had a small paired-seed disagreement edge&lt;/li&gt;
-&lt;li&gt;the gap is below the frozen &lt;code&gt;0.01&lt;/code&gt; threshold for a winner claim&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The result cannot say:&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;attention-only LoRA is generally better&lt;/li&gt;
-&lt;li&gt;all-layer LoRA is bad&lt;/li&gt;
-&lt;li&gt;the same result should hold across other ranks, models, datasets, or benchmarks&lt;/li&gt;
-&lt;li&gt;validation NLL explains the benchmark gap as a mechanism&lt;/li&gt;
-&lt;/ul&gt;
-&lt;h2 id=&quot;10-what-this-leaves-me-with&quot;&gt;10. What This Leaves Me With&lt;/h2&gt;
-&lt;p&gt;The final comparison was the easy sentence at the end of a lot of setup.&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;I started too broad and had to cut the project down to one comparison.&lt;/li&gt;
-&lt;li&gt;I thought the first dataset recipe was close, then the audits kept proving otherwise.&lt;/li&gt;
-&lt;li&gt;I abandoned the augmented-heavy branch because it made the dataset itself the unstable variable.&lt;/li&gt;
-&lt;li&gt;I kept the system prompt because the output contract needed to be explicit.&lt;/li&gt;
-&lt;li&gt;I froze the eval contract before the result existed.&lt;/li&gt;
-&lt;li&gt;I had to repair train/validation leakage by grouping canonical problem text.&lt;/li&gt;
-&lt;li&gt;The smoke pass caught a render mismatch before paid runs.&lt;/li&gt;
-&lt;li&gt;LR selection picked &lt;code&gt;3e-4&lt;/code&gt; for both conditions.&lt;/li&gt;
-&lt;li&gt;Throughput work mattered, but only after batch size stayed controlled.&lt;/li&gt;
-&lt;li&gt;All six main runs selected step &lt;code&gt;3169&lt;/code&gt;.&lt;/li&gt;
-&lt;li&gt;Training checkpoints had to be converted to sampler weights before evaluation.&lt;/li&gt;
-&lt;li&gt;The disagreement chart was more honest than only talking about a mean gap.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;The result is small, but the path to making it trustworthy was not.&lt;/p&gt;
-&lt;p&gt;If I were doing the next version, I would keep the same discipline: narrow the question first, freeze contracts before seeing benchmark numbers, treat dataset audits as part of the experiment, and make every convenience change prove that it does not change the comparison. The follow-up question I would carry forward is when a narrower adapter is enough, and when broader adaptation is worth the extra size.&lt;/p&gt;</content:encoded></item><item><title>Inside a Transformer: A Worklog</title><link>https://herambve.github.io/blog/inside-a-transformer/</link><guid isPermaLink="true">https://herambve.github.io/blog/inside-a-transformer/</guid><description>explaining to myself how transformer work by looking into its mechanics</description><pubDate>Thu, 30 Oct 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;draft: true&lt;/p&gt;
+&lt;div class=&quot;footnotes-section&quot;&gt;&lt;div id=&quot;footnote-1&quot; class=&quot;footnote-item&quot;&gt;&lt;span class=&quot;footnote-number&quot;&gt;[1]&lt;/span&gt;&lt;span&gt;A Mathematical Framework for Transformer Circuits&lt;/a&gt;, Anthropic, 2021. &lt;a href=&apos;https://transformer-circuits.pub/2021/framework/index.html&apos; target=&apos;_blank&apos;&gt;https://transformer-circuits.pub/2021/framework/index.html&lt;/a&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;</content:encoded></item><item><title>Inside a Transformer: A Worklog</title><link>https://herambve.github.io/blog/inside-a-transformer/</link><guid isPermaLink="true">https://herambve.github.io/blog/inside-a-transformer/</guid><description>explaining to myself how transformer work by looking into its mechanics</description><pubDate>Thu, 30 Oct 2025 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;draft: true&lt;/p&gt;
 
 &lt;blockquote&gt;
 &lt;p&gt;This is currently purely a worklog in progress. Things are not formatted yet.&lt;/p&gt;
@@ -1671,4 +946,729 @@ can show a profile README through a &lt;code&gt;.profile&lt;/code&gt; repo.&lt;/
 &lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;zsh&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-light-font-style:italic;--shiki-dark:#89B4FA;--shiki-dark-font-style:italic&quot;&gt;gitea-backup&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
 &lt;p&gt;The setup has landed here for me. GitHub stays for now for public collaboration (@Cursor yall
 completing your GitHub killer anytime soon?), Gitea for a local mirror and Git home, Tailscale for
-private SSH, Cloudflare Tunnel for public web, and daily jobs for the boring parts.&lt;/p&gt;</content:encoded></item></channel></rss>
+private SSH, Cloudflare Tunnel for public web, and daily jobs for the boring parts.&lt;/p&gt;</content:encoded></item><item><title>Attention-Only vs. All-Layer LoRA: A Worklog</title><link>https://herambve.github.io/blog/lora-target-module-worklog/</link><guid isPermaLink="true">https://herambve.github.io/blog/lora-target-module-worklog/</guid><description>a longer worklog from narrowing, cleaning, training, and evaluating a Qwen3-8B LoRA target-module comparison</description><pubDate>Fri, 15 May 2026 00:00:00 GMT</pubDate><content:encoded>&lt;p&gt;draft: true&lt;/p&gt;
+&lt;p&gt;This is the worklog version of the &lt;a href=&quot;/projects/lora-and-friends&quot;&gt;LoRA and Friends&lt;/a&gt; experiment.&lt;/p&gt;
+&lt;p&gt;The final public artifacts are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;model checkpoints: &lt;a href=&quot;https://huggingface.co/sumitdotml/lora-and-friends&quot;&gt;sumitdotml/lora-and-friends&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;dataset: &lt;a href=&quot;https://huggingface.co/datasets/sumitdotml/lora-and-friends-dataset&quot;&gt;sumitdotml/lora-and-friends-dataset&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;1-before-the-run&quot;&gt;1. Before The Run&lt;/h2&gt;
+&lt;h3 id=&quot;2026-04-19-the-first-plan-had-too-many-moving-parts&quot;&gt;2026-04-19: the first plan had too many moving parts&lt;/h3&gt;
+&lt;p&gt;I started with too many possible experiments in the air: full fine-tuning, MoE, RL, transfer evaluation, Tinker defaults, LoRA target modules, dataset choice, benchmark choice, and budget. That was not a runnable project but a pile of directions.&lt;/p&gt;
+&lt;p&gt;I removed most of it. Phase one became:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;one model: &lt;code&gt;Qwen3-8B&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;one task family: math reasoning&lt;/li&gt;
+&lt;li&gt;one final benchmark anchor: &lt;code&gt;GSM8K&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;one supervised fine-tuning comparison: attention-only LoRA vs all-layer LoRA&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I kept &lt;code&gt;Qwen3-8B&lt;/code&gt; as the working model. &lt;code&gt;Qwen3-8B-Base&lt;/code&gt; stayed in reserve for a different post-training story, and a smaller future model would have added a model-choice variable that I did not want in the first comparison.&lt;/p&gt;
+&lt;p&gt;The target-module comparison was the part I wanted to isolate:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th&gt;intended adapter scope&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td&gt;attention projections&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;attention and MLP projections&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;That meant everything else had to become boring on purpose: same base model, same data, same rank, same training schedule, same evaluation prompt, same answer extraction, same benchmark, and same checkpoint-selection rule.&lt;/p&gt;
+&lt;h3 id=&quot;why-gsm8k-became-the-benchmark-not-the-main-training-set&quot;&gt;Why GSM8K became the benchmark, not the main training set&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;GSM8K&lt;/code&gt; was tempting as a training source because it is clean and familiar. But the train split has only &lt;code&gt;7,473&lt;/code&gt; rows, and the test split has &lt;code&gt;1,319&lt;/code&gt; rows. I wanted the final score to be held out and easy to explain, so I kept GSM8K as the benchmark anchor.&lt;/p&gt;
+&lt;p&gt;The training source moved to &lt;code&gt;nvidia/OpenMathInstruct-2&lt;/code&gt;, especially the &lt;code&gt;train_1M&lt;/code&gt; split. The schema was simple enough to render into chat format:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;problem&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;Solve for $y$:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\n\n&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;$$&lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;frac{y^2 - 3y + 2}{y - 2} = y + 1$$&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;generated_solution&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;... &lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;[ y = &lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;boxed{2} &lt;/span&gt;&lt;span style=&quot;--shiki-light:#EA76CB;--shiki-dark:#F5C2E7&quot;&gt;\\&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt;]&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;expected_answer&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;2&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;problem_source&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;augmented_math&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I also looked at &lt;code&gt;unsloth/OpenMathReasoning-mini&lt;/code&gt;. It had more character and much longer traces, but the token profile made it harder to fit into the budget. &lt;code&gt;OpenMathInstruct-2&lt;/code&gt; looked less exciting, but it had the right shape for a controlled SFT comparison.&lt;/p&gt;
+&lt;p&gt;The first sizing pass made the budget concrete. A 500-row tokenizer sample from OpenMathInstruct-2 averaged &lt;code&gt;456.9&lt;/code&gt; rendered tokens per example, with &lt;code&gt;p90 = 813&lt;/code&gt; and &lt;code&gt;p95 = 963&lt;/code&gt;. At Tinker’s then-current &lt;code&gt;Qwen3-8B&lt;/code&gt; training price of &lt;code&gt;$0.40 / M&lt;/code&gt; tokens, a 30k-example run started to look feasible.&lt;/p&gt;
+&lt;p&gt;The first target was a mildly balanced 30k dataset:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;30k working raw dataset&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- 21,000  augmented_math&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;-  7,000  augmented_gsm8k&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;-  1,000  math&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;-  1,000  gsm8k&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The first plan did not survive.&lt;/p&gt;
+&lt;h3 id=&quot;the-first-run-sheet-was-useful-even-though-it-was-wrong&quot;&gt;The first run sheet was useful even though it was wrong&lt;/h3&gt;
+&lt;p&gt;The first run sheet had a training split of &lt;code&gt;27,000&lt;/code&gt; rows and a validation split of &lt;code&gt;3,000&lt;/code&gt; rows. With the early weighted mean estimate, that came out to about &lt;code&gt;11.70M&lt;/code&gt; train tokens per epoch and about &lt;code&gt;$4.68&lt;/code&gt; per epoch.&lt;/p&gt;
+&lt;p&gt;The pilot shape was also already there:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;pilot sweep&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- train rows: 5,000&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- val rows:     500&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- 2 conditions x 3 LR values x 1 seed x 1 epoch&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;And the main comparison shape was visible:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;thesis comparison&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- 2 conditions x 3 seeds x 2 epochs&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;- total train cost: about $56.17&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Those numbers were later superseded, but they were still useful. They forced me to think in runs, seeds, rows, tokens, and dollars instead of treating “fine-tune a model” as one vague action.&lt;/p&gt;
+&lt;p&gt;The benchmark side looked cheap in comparison. One full GSM8K eval was estimated around cents, not dollars of training cost. So from the beginning, training data and training schedule were the real budget levers.&lt;/p&gt;
+&lt;h2 id=&quot;2-before-training&quot;&gt;2. Before Training&lt;/h2&gt;
+&lt;h3 id=&quot;2026-04-20-the-first-dataset-looked-usable-until-i-read-it&quot;&gt;2026-04-20: the first dataset looked usable until I read it&lt;/h3&gt;
+&lt;p&gt;The initial &lt;code&gt;openmath_30k&lt;/code&gt; artifacts matched the recipe exactly: &lt;code&gt;27,000&lt;/code&gt; train rows and &lt;code&gt;3,000&lt;/code&gt; validation rows. Structurally it looked clean. Every inspected training row had a final &lt;code&gt;\boxed{...}&lt;/code&gt; answer. The first rendered dataset under &lt;code&gt;qwen3_disable_thinking&lt;/code&gt; also looked reasonable.&lt;/p&gt;
+&lt;p&gt;Then the manual audit started doing its job.&lt;/p&gt;
+&lt;p&gt;One sampled &lt;code&gt;augmented_gsm8k&lt;/code&gt; row reasoned itself into clipping a percentage answer to &lt;code&gt;100&lt;/code&gt; because a fictional budget was too small. A tetrahedron row noticed a fractional tetrahedron count was impossible and still pushed through to a final ratio. A pattern search found disclaimer-like repair language:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;cannot spend more than she has&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;doesn&amp;#39;t align with the logical outcome&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;we need to set the value to 100&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;At first I treated this as a light cleanup problem. I removed a couple of flagged rows, built filtered artifacts, and added manual review packs. The mismatch count fell, the obvious bad rows got smaller, and the dataset felt closer.&lt;/p&gt;
+&lt;p&gt;But each pass exposed another class of issue.&lt;/p&gt;
+&lt;h3 id=&quot;the-augmented-branch-kept-asking-for-another-pass&quot;&gt;The augmented branch kept asking for another pass&lt;/h3&gt;
+&lt;p&gt;The suspicious rows were concentrated in the augmented sources. The failures were not all the same, but they had a family resemblance: impossible integer counts, prompt-generation residue, unsupported case-bashing, and answers that looked right only because the generated reasoning had quietly changed the problem.&lt;/p&gt;
+&lt;p&gt;The review packs were small enough to inspect but large enough to change my mind. A &lt;code&gt;53&lt;/code&gt;-row suspicious train pack for &lt;code&gt;curated_v2&lt;/code&gt; produced &lt;code&gt;29&lt;/code&gt; removals. A later &lt;code&gt;61&lt;/code&gt;-row suspicious train pack produced &lt;code&gt;30&lt;/code&gt; hard removals, all from &lt;code&gt;augmented_math&lt;/code&gt;. These were not tiny formatting mismatches but rows with broken reasoning, contaminated prompts, or invalid proofs.&lt;/p&gt;
+&lt;p&gt;The curation sequence became longer than I wanted:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;curated_v2&lt;/code&gt;: after the first train and validation suspicious-row removals&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;curated_v3&lt;/code&gt;: after another suspicious train review&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;curated_v4&lt;/code&gt;: after validation cleanup&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;curated_v5&lt;/code&gt;: after backfilling weak &lt;code&gt;augmented_math&lt;/code&gt; rows&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;curated_v6&lt;/code&gt;: after removing prompt-generation debris like &lt;code&gt;A new problem:&lt;/code&gt; and &lt;code&gt;The new problem is:&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;One excerpt from the log captures the real issue:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;The problem was no longer &amp;quot;find one more regex,&amp;quot;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;it was &amp;quot;stop trusting augmented_math as the backbone of the dataset.&amp;quot;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;At that point I stopped trying to rescue the 30k augmented-heavy recipe. If the dataset takes repeated repair passes and still produces obvious bad rows in random review, then it stops being a clean experimental input and becomes the experiment itself.&lt;/p&gt;
+&lt;p&gt;I did not want the final write-up to be “attention-only LoRA versus all-layer LoRA, but also maybe the augmented data had hidden garbage.” That would have made every downstream result harder to trust.&lt;/p&gt;
+&lt;h3 id=&quot;2026-04-20-to-2026-04-21-i-rebuilt-around-original-rows-only&quot;&gt;2026-04-20 to 2026-04-21: I rebuilt around original rows only&lt;/h3&gt;
+&lt;p&gt;&lt;code&gt;OpenMathInstruct-2 train_1M&lt;/code&gt; had &lt;code&gt;29,468&lt;/code&gt; original-source rows across &lt;code&gt;gsm8k&lt;/code&gt; and &lt;code&gt;math&lt;/code&gt;. After the strict gate, &lt;code&gt;28,166&lt;/code&gt; survived cleanly enough to build a new candidate.&lt;/p&gt;
+&lt;p&gt;The accepted source counts were:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;gsm8k&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 14618&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;math&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 13548&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The original-only dataset was smaller than the 30k target, but the quality profile was much better. It cleared the automatic checks that the augmented branch kept failing:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;boxed-match rate, train: &lt;code&gt;1.0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;boxed-match rate, validation: &lt;code&gt;1.0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;suspicious rows, train: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;suspicious rows, validation: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;prompt-wrapper contamination hits, train: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;prompt-wrapper contamination hits, validation: &lt;code&gt;0&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I froze this path as &lt;code&gt;openmath_original_clean&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;After a later split repair, the final retained manifest became:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;split&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;&lt;code&gt;gsm8k&lt;/code&gt; source rows&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;&lt;code&gt;math&lt;/code&gt; source rows&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;total&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;train&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;13,145&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;12,203&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,348&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;validation&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1,473&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1,345&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,818&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;The old &lt;code&gt;openmath_30k*&lt;/code&gt; lineage was retired after that. I wanted one clear dataset path in the repo, not a dozen stale artifact branches that future-me or another agent might accidentally treat as active.&lt;/p&gt;
+&lt;h3 id=&quot;2026-04-21-i-kept-the-system-prompt&quot;&gt;2026-04-21: I kept the system prompt&lt;/h3&gt;
+&lt;p&gt;The render sanity check compared the frozen dataset with and without the system prompt under the actual &lt;code&gt;Qwen/Qwen3-8B&lt;/code&gt; chat template. The prompt added a constant &lt;code&gt;27&lt;/code&gt; tokens per example.&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;full_mean_with_system&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 340.25&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;full_mean_without_system&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 313.25&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;full_mean_delta&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 27.0&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;That overhead was small enough to keep. More importantly, the prompt made the output contract explicit:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;You are a careful math solver. Solve the problem step by step. Put the final answer in \boxed{}.&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I kept it because the raw problems themselves do not always carry the boxed-answer instruction. I also wanted training and evaluation to mirror each other as closely as possible.&lt;/p&gt;
+&lt;h2 id=&quot;3-contracts-and-sanity-checks&quot;&gt;3. Contracts And Sanity Checks&lt;/h2&gt;
+&lt;h3 id=&quot;2026-04-22-i-stopped-relying-on-memory&quot;&gt;2026-04-22: I stopped relying on memory&lt;/h3&gt;
+&lt;p&gt;Once the dataset path was stable, the next risk was format drift. It is easy to train with one prompt, evaluate with another, parse answers a third way, and then accidentally report a prompt experiment as a model experiment.&lt;/p&gt;
+&lt;p&gt;So I wrote the contracts down before the final result existed.&lt;/p&gt;
+&lt;p&gt;I also had to clean up the planning docs. Some TODO labels were too compressed. A label like “contamination check” made sense to me while I was in the middle of the work, but it hid the actual operation: compare training-side &lt;code&gt;gsm8k&lt;/code&gt; problem text against held-out GSM8K test questions after canonical normalization, then block training if overlap is greater than zero.&lt;/p&gt;
+&lt;p&gt;So I added an execution-clarity rule for the project: open tasks needed to say what the action was, why it mattered, what counted as done, and what happened if it failed. It sounds procedural, but it kept the later runbook from turning into shorthand only I could decode.&lt;/p&gt;
+&lt;p&gt;The evaluation contract froze:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;the same system prompt as training&lt;/li&gt;
+&lt;li&gt;greedy decoding with &lt;code&gt;temperature = 0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;enable_thinking=False&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;max_new_tokens = 512&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;no custom stop tokens&lt;/li&gt;
+&lt;li&gt;boxed-answer extraction only&lt;/li&gt;
+&lt;li&gt;exact match after normalization&lt;/li&gt;
+&lt;li&gt;the contamination report path&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The contamination check was a gate, not a note. If training-side &lt;code&gt;gsm8k&lt;/code&gt; rows overlapped the GSM8K test questions, the benchmark had to change or the dataset had to be rebuilt.&lt;/p&gt;
+&lt;p&gt;The result schema was frozen around retained JSONL output under &lt;code&gt;artifacts/results/&amp;lt;run_id&amp;gt;/&lt;/code&gt;. It also kept &lt;code&gt;token_count&lt;/code&gt; and &lt;code&gt;cost&lt;/code&gt; in the canonical schema even when those values were &lt;code&gt;null&lt;/code&gt;, because I did not want the schema to change later just because telemetry became available.&lt;/p&gt;
+&lt;p&gt;I also standardized on the word &lt;code&gt;condition&lt;/code&gt; for the comparison label, which sounds minor but made later artifacts easier to read:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;condition&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;attention_only&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;seed&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;step&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 3169&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&quot;2026-05-03-the-dataset-split-still-had-a-hidden-problem&quot;&gt;2026-05-03: the dataset split still had a hidden problem&lt;/h3&gt;
+&lt;p&gt;When I ran the dataset-integrity gate, the benchmark side passed. The training-side &lt;code&gt;gsm8k&lt;/code&gt; rows had &lt;code&gt;0&lt;/code&gt; overlap with the &lt;code&gt;openai/gsm8k&lt;/code&gt; test split.&lt;/p&gt;
+&lt;p&gt;But the local train/validation split failed a different check. OpenMath can include multiple accepted solutions for the same underlying problem. The original builder had split rows independently, so variants of the same problem could land on both sides.&lt;/p&gt;
+&lt;p&gt;That would make validation loss too friendly. It would also make checkpoint or LR decisions look cleaner than they were.&lt;/p&gt;
+&lt;p&gt;The fix was to group by canonical problem text before splitting. The retained report after the rebuild says:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;status&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#40A02B;--shiki-dark:#A6E3A1&quot;&gt; &amp;quot;pass&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;overlap_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_val_overlap&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;row_id_overlap_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;problem_text_overlap_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;overlapped_val_row_count&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; 0&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The final contamination report compared &lt;code&gt;13,145&lt;/code&gt; training rows with &lt;code&gt;source == &amp;quot;gsm8k&amp;quot;&lt;/code&gt; against &lt;code&gt;1,319&lt;/code&gt; GSM8K test questions. It found &lt;code&gt;overlap_count = 0&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The raw files were not enough on their own, and the split rule mattered.&lt;/p&gt;
+&lt;h3 id=&quot;2026-05-04-the-dataset-went-to-hugging-face&quot;&gt;2026-05-04: the dataset went to Hugging Face&lt;/h3&gt;
+&lt;p&gt;After the repaired split, the frozen dataset payloads were published to &lt;code&gt;sumitdotml/lora-and-friends-dataset&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The local repo kept scripts, manifests, checksums, and audit evidence. The Hub repo carried the payloads:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;payload&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;rows&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;bytes&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;raw train&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,348&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,528,287&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;raw validation&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,818&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,787,397&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;rendered train&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;25,348&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;29,989,535&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;rendered validation&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2,818&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3,283,365&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;At this point I had a real dataset, a render path, an evaluation contract, and a contamination gate. I still did not know whether the training path would work.&lt;/p&gt;
+&lt;h2 id=&quot;4-first-tinker-check&quot;&gt;4. First Tinker Check&lt;/h2&gt;
+&lt;h3 id=&quot;2026-05-04-the-first-backend-check-caught-a-renderer-trap&quot;&gt;2026-05-04: the first backend check caught a renderer trap&lt;/h3&gt;
+&lt;p&gt;The first Tinker smoke pass was supposed to be boring. It was one of the smallest checks in the whole project: can Tinker accept &lt;code&gt;Qwen/Qwen3-8B&lt;/code&gt;, rank &lt;code&gt;8&lt;/code&gt;, and the two LoRA condition switches?&lt;/p&gt;
+&lt;p&gt;The Tinker cookbook &lt;code&gt;qwen3_disable_thinking&lt;/code&gt; renderer was correct for generation prompts, but its supervised-training path did not match the frozen SFT render contract. The project contract was the Hugging Face chat template with &lt;code&gt;enable_thinking=False&lt;/code&gt;, which renders an empty thinking block before the assistant answer:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;&amp;lt;think&amp;gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;&amp;lt;/think&amp;gt;&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I changed the smoke runner so Tinker datums came from &lt;code&gt;AutoTokenizer.apply_chat_template(..., enable_thinking=False)&lt;/code&gt;, then masked loss only after the rendered prompt prefix.&lt;/p&gt;
+&lt;p&gt;The retained smoke pass then gave me enough to lock the adapter defaults:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;train rows in smoke&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;optimizer steps&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;validation NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1.5048651695251465&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;8&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1.4733978509902954&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;Tinker accepted:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;json&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;{&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;attention_only&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_attn&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_mlp&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; false&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_unembed&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; false&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	},&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;all_layer&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt; {&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_attn&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_mlp&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; true&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;,&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;		&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#1E66F5;--shiki-dark:#89B4FA&quot;&gt;train_unembed&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;&amp;quot;&lt;/span&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;:&lt;/span&gt;&lt;span style=&quot;--shiki-light:#FE640B;--shiki-dark:#FAB387&quot;&gt; false&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;	}&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span style=&quot;--shiki-light:#7C7F93;--shiki-dark:#9399B2&quot;&gt;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The public Tinker API did not expose local &lt;code&gt;lora_alpha&lt;/code&gt; or &lt;code&gt;lora_dropout&lt;/code&gt; fields through this training path. I recorded those as backend-owned instead of pretending the runner controlled them.&lt;/p&gt;
+&lt;p&gt;There was one more small backend detail in the log: the first smoke attempt printed that the Tinker SDK version was outdated. I upgraded to &lt;code&gt;tinker==0.18.2&lt;/code&gt;, reran the smoke pass, and the warning did not reappear. Backend version drift becomes hard to reconstruct later, so I kept the note.&lt;/p&gt;
+&lt;p&gt;The smoke pass also created checkpoint paths with a seven-day TTL. That did not matter for the final result yet, but it foreshadowed the export urgency after the main sweep.&lt;/p&gt;
+&lt;h3 id=&quot;2026-05-05-i-ran-the-untouched-baseline-before-touching-lora&quot;&gt;2026-05-05: I ran the untouched baseline before touching LoRA&lt;/h3&gt;
+&lt;p&gt;The baseline was &lt;code&gt;Qwen/Qwen3-8B&lt;/code&gt; on &lt;code&gt;openai/gsm8k&lt;/code&gt;, config &lt;code&gt;main&lt;/code&gt;, split &lt;code&gt;test&lt;/code&gt;, with &lt;code&gt;enable_thinking=false&lt;/code&gt;, &lt;code&gt;temperature=0&lt;/code&gt;, and &lt;code&gt;max_new_tokens=512&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The retained baseline run was:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;artifacts/results/baseline-qwen3-8b-gsm8k-001/&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;It scored:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;examples: &lt;code&gt;1,319&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;correct: &lt;code&gt;1,115&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;accuracy: &lt;code&gt;0.8453373768006065&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;extraction failures: &lt;code&gt;31&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;total eval tokens: &lt;code&gt;505,694&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I wanted this number before LR selection and before the main comparison. Otherwise, the final LoRA scores would float without a reference.&lt;/p&gt;
+&lt;h2 id=&quot;5-learning-rate-and-batch-shape&quot;&gt;5. Learning Rate And Batch Shape&lt;/h2&gt;
+&lt;h3 id=&quot;2026-05-06-the-lr-selection-plan-was-too-slow&quot;&gt;2026-05-06: the LR-selection plan was too slow&lt;/h3&gt;
+&lt;p&gt;The first LR-selection protocol used &lt;code&gt;5,000&lt;/code&gt; train rows and &lt;code&gt;500&lt;/code&gt; validation rows. On paper it was reasonable. In practice it projected to roughly &lt;code&gt;20&lt;/code&gt; hours for the six-run sweep on Tinker.&lt;/p&gt;
+&lt;p&gt;I rescaled it to a deterministic slice:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;first &lt;code&gt;512&lt;/code&gt; train rows&lt;/li&gt;
+&lt;li&gt;first &lt;code&gt;128&lt;/code&gt; validation rows&lt;/li&gt;
+&lt;li&gt;seed &lt;code&gt;7&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;LR grid: &lt;code&gt;1e-4&lt;/code&gt;, &lt;code&gt;3e-4&lt;/code&gt;, &lt;code&gt;1e-3&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;two conditions&lt;/li&gt;
+&lt;li&gt;one epoch&lt;/li&gt;
+&lt;li&gt;effective batch size &lt;code&gt;8&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The narrow purpose was to choose a peak LR per condition, not to run a final benchmark or a condition comparison.&lt;/p&gt;
+&lt;p&gt;The selected LR was &lt;code&gt;3e-4&lt;/code&gt; for both:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;LR&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;best validation NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3786645046540731&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3632619345728878&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3644437038722405&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3648794147648033&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3559855057286731&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;&lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.37397296784836664&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;I kept seed &lt;code&gt;7&lt;/code&gt; reserved for selection work so the main comparison seeds could be &lt;code&gt;0&lt;/code&gt;, &lt;code&gt;1&lt;/code&gt;, and &lt;code&gt;2&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The LR-selection runner also caught a plain implementation bug before the expensive runs. I had assumed Tinker cookbook datum weights were raw torch tensors. They were &lt;code&gt;TensorData&lt;/code&gt; objects. The live one-step probe failed, the runner got fixed, and that mistake went into &lt;code&gt;AGENT_MISTAKES.md&lt;/code&gt;. The final result depends on the boring part where a runner can survive a one-step live probe before it is trusted for a sweep.&lt;/p&gt;
+&lt;p&gt;I also split the training helper code into smaller modules:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;training/common.py&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;training/sft.py&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;training/lora.py&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The runnable scripts stayed separate: one for the smoke pass, one for LR selection, and later one for the main training sweep. This kept the orchestration scripts readable enough that I could still inspect what was being frozen.&lt;/p&gt;
+&lt;h3 id=&quot;2026-05-07-speed-was-tempting-but-batch-size-was-not-free&quot;&gt;2026-05-07: speed was tempting, but batch size was not free&lt;/h3&gt;
+&lt;p&gt;The initial runner shape used eight one-datum train requests before each optimizer step. A throughput probe showed that request shape mattered a lot at the same effective batch size:&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_08_throughput_probe.CqeELwHK_1tclPb.webp&quot; alt=&quot;Throughput by request shape&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;1851&quot; height=&quot;1100&quot;&gt;&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;request shape&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;seconds per optimizer step&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;single_datum_calls&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;20.22187466151081&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;batched_datums&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;5.201307859155349&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;batched_datums_pipelined&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2.4104866901249693&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;The fast version, &lt;code&gt;batched_datums_pipelined&lt;/code&gt;, submits one batched &lt;code&gt;forward_backward_async(...)&lt;/code&gt; request and queues the optimizer request before waiting. That kept the nominal effective batch size at &lt;code&gt;8&lt;/code&gt;; it only changed how the same batch was sent to Tinker.&lt;/p&gt;
+&lt;p&gt;Then larger batches looked tempting. Batch &lt;code&gt;512&lt;/code&gt; and &lt;code&gt;1024&lt;/code&gt; were much faster in throughput probes. But batch size is a real hyperparameter for LoRA, so I made the larger-batch path earn its way in by validation NLL, and it did not.&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th&gt;selected batch/LR&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;selected NLL&lt;/th&gt;&lt;th&gt;best larger-batch candidate&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;candidate NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td&gt;batch 8, &lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3632619345728878&lt;/td&gt;&lt;td&gt;batch 512, &lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.37616809419132946&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td&gt;batch 8, &lt;code&gt;3e-4&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3559855057286731&lt;/td&gt;&lt;td&gt;batch 512, &lt;code&gt;1e-3&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.3569802998485914&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;So the main run kept effective batch size &lt;code&gt;8&lt;/code&gt;, used the pipelined request shape, and kept the final partial batch of &lt;code&gt;4&lt;/code&gt; rows rather than wrapping around and duplicating examples. The fast path was real, but it was only allowed to change operations, not silently change the scientific comparison.&lt;/p&gt;
+&lt;h2 id=&quot;6-the-six-runs&quot;&gt;6. The Six Runs&lt;/h2&gt;
+&lt;h3 id=&quot;2026-05-08-main-001-started&quot;&gt;2026-05-08: &lt;code&gt;main-001&lt;/code&gt; started&lt;/h3&gt;
+&lt;p&gt;The main run expanded to six sequential condition/seed runs:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;main-001-attention_only-seed-0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;main-001-attention_only-seed-1&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;main-001-attention_only-seed-2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;main-001-all_layer-seed-0&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;main-001-all_layer-seed-1&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;main-001-all_layer-seed-2&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The launch command was:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;uv run training/run_main_training.py --run-prefix main-001&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Each run used:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;train rows: &lt;code&gt;25,348&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;validation rows: &lt;code&gt;2,818&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;epochs: &lt;code&gt;2&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;effective batch size: &lt;code&gt;8&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;optimizer steps per epoch: &lt;code&gt;3,169&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;total optimizer steps: &lt;code&gt;6,338&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;warmup steps: &lt;code&gt;190&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;peak LR: &lt;code&gt;3e-4&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;min LR: &lt;code&gt;3e-5&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The validation/checkpoint cadence was &lt;code&gt;1000&lt;/code&gt;, &lt;code&gt;2000&lt;/code&gt;, &lt;code&gt;3169&lt;/code&gt;, &lt;code&gt;4000&lt;/code&gt;, &lt;code&gt;5000&lt;/code&gt;, &lt;code&gt;6000&lt;/code&gt;, and &lt;code&gt;6338&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;I monitored this like a long-running job, because it was one. The raw log has many repeated entries that look boring at first glance:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;validation step=1000 nll=...&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;validation step=2000 nll=...&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;validation step=3169 nll=...&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;...&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Those entries showed that the run was still alive, that validation/checkpoint blocks resumed correctly, and that every retained checkpoint path was read from the active run rather than guessed from a sibling run.&lt;/p&gt;
+&lt;p&gt;I had already made that mistake once while logging a checkpoint URL by analogy from a sibling run. The fix was simple: read the exact checkpoint string from the active run’s &lt;code&gt;metrics.jsonl&lt;/code&gt; or summary before writing it down. After that, I treated checkpoint paths as evidence, not as strings I could reconstruct from memory.&lt;/p&gt;
+&lt;h3 id=&quot;step-3169-kept-showing-up&quot;&gt;Step 3169 kept showing up&lt;/h3&gt;
+&lt;p&gt;The first attention-only seed hit:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;main-001-attention_only-seed-0: validation step=3169 nll=0.336164&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Its final summary selected step &lt;code&gt;3169&lt;/code&gt;, not the final step &lt;code&gt;6338&lt;/code&gt;:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;selected best validation step: 3169&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;selected validation_mean_nll: 0.33616363178874076&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Then seed &lt;code&gt;1&lt;/code&gt; selected step &lt;code&gt;3169&lt;/code&gt;, then seed &lt;code&gt;2&lt;/code&gt;, then all-layer seed &lt;code&gt;0&lt;/code&gt;, then all-layer seed &lt;code&gt;1&lt;/code&gt;, then all-layer seed &lt;code&gt;2&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;At the end, every run selected the one-epoch boundary:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;run&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;selected step&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;validation NLL&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-attention_only-seed-0&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33616363178874076&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-attention_only-seed-1&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33621202263413363&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-attention_only-seed-2&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33651007850933906&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-all_layer-seed-0&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33611938013674597&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-all_layer-seed-1&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33655583715915666&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;main-001-all_layer-seed-2&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;3169&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.33634131648081267&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_05_validation_nll_diagnostic.pUHefRY0_2aPbOO.webp&quot; alt=&quot;Validation NLL by training step&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;1911&quot; height=&quot;1158&quot;&gt;&lt;/p&gt;
+&lt;p&gt;The selected NLL means were close:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;attention_only&lt;/code&gt;: &lt;code&gt;0.3362952443107378&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;all_layer&lt;/code&gt;: &lt;code&gt;0.3363388445922384&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;But the post-3169 behavior was different. Attention-only stayed near the selected NLL. All-layer jumped more sharply after the one-epoch boundary; at step &lt;code&gt;4000&lt;/code&gt;, all-layer mean NLL was &lt;code&gt;0.3457733619534809&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;I did not treat that as the final result though; it was a training diagnostic, and the actual comparison still had to come from GSM8K.&lt;/p&gt;
+&lt;p&gt;For all-layer seed &lt;code&gt;1&lt;/code&gt;, the NLL moved from &lt;code&gt;0.33655583715915666&lt;/code&gt; at step &lt;code&gt;3169&lt;/code&gt; to &lt;code&gt;0.34549824556309505&lt;/code&gt; at step &lt;code&gt;4000&lt;/code&gt;. For all-layer seed &lt;code&gt;2&lt;/code&gt;, it moved from &lt;code&gt;0.33634131648081267&lt;/code&gt; to &lt;code&gt;0.3461580484910246&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;The lowest-NLL checkpoint rule prevented later checkpoints from becoming attractive simply because they were later or because the run had continued longer.&lt;/p&gt;
+&lt;h3 id=&quot;the-sweep-finished-with-six-pass-summaries&quot;&gt;The sweep finished with six pass summaries&lt;/h3&gt;
+&lt;p&gt;The final all-layer seed completed on 2026-05-09. The log entry was satisfying because the sweep had finally become a finite object:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;completion artifacts now exist in artifacts/results/main-001-all_layer-seed-2/:&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;manifest.json, metrics.jsonl, sample_render.txt, summary.json&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;Each of the six selected checkpoints had a seven-day Tinker TTL, so the next step was urgent enough: export the selected checkpoint states into something that could be evaluated and published.&lt;/p&gt;
+&lt;h2 id=&quot;7-checkpoint-export&quot;&gt;7. Checkpoint Export&lt;/h2&gt;
+&lt;h3 id=&quot;2026-05-09-training-weights-were-not-sampler-weights&quot;&gt;2026-05-09: training weights were not sampler weights&lt;/h3&gt;
+&lt;p&gt;The selected training checkpoints used &lt;code&gt;weights/...&lt;/code&gt; paths. I initially wanted to use those directly for publication/evaluation, but the sampling client rejected that shape.&lt;/p&gt;
+&lt;p&gt;The actual server response was:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;tinker.BadRequestError: Error code: 400 - {&amp;#39;detail&amp;#39;: &amp;#39;model_path must point to a sampler_weights checkpoint, got weights&amp;#39;}&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;So the selected training state checkpoints had to be converted to sampler-format weights before any evaluation could run.&lt;/p&gt;
+&lt;p&gt;The working export path was:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;load_state_async(training_checkpoint_path)&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;save_weights_for_sampler_async(export_name)&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The six sampler checkpoint URIs then looked like:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;tinker://.../sampler_weights/export-main-001-attention_only-seed-0-step-3169&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;tinker://.../sampler_weights/export-main-001-all_layer-seed-2-step-3169&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;After that, the converted adapters were uploaded to the Hugging Face model repo. The published layout is:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;checkpoints/best-checkpoints/attention_only/seed-{0,1,2}/step-3169/&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;checkpoints/best-checkpoints/all_layer/seed-{0,1,2}/step-3169/&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;The sampler weights also made the adapter-size difference concrete. The attention-only sampler exports were about &lt;code&gt;30.8M&lt;/code&gt; bytes each in the Tinker checkpoint listing, while the all-layer sampler exports were about &lt;code&gt;87.5M&lt;/code&gt; bytes each. That was expected from the larger adapter scope, but it was useful to see it in the retained checkpoint metadata rather than only as intuition.&lt;/p&gt;
+&lt;h2 id=&quot;8-gsm8k-evaluation&quot;&gt;8. GSM8K Evaluation&lt;/h2&gt;
+&lt;h3 id=&quot;2026-05-10-the-evaluation-runner-needed-checkpoint-awareness&quot;&gt;2026-05-10: the evaluation runner needed checkpoint awareness&lt;/h3&gt;
+&lt;p&gt;The baseline path already existed, but checkpoint evaluation needed more safeguards. I added support for:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;--checkpoint-path&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;explicit &lt;code&gt;--seed&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;explicit &lt;code&gt;--condition&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;a run-id slug that would not collide when checkpoint paths ended similarly&lt;/li&gt;
+&lt;li&gt;step parsing only from literal &lt;code&gt;step-&amp;lt;digits&amp;gt;&lt;/code&gt; tokens&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I also made the argument validation fail fast if a checkpoint path was passed without condition or seed. I did not want a LoRA checkpoint quietly defaulting to &lt;code&gt;base&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Before launching the full sweep, I ran a one-example probe with &lt;code&gt;attention_only&lt;/code&gt; seed &lt;code&gt;0&lt;/code&gt;. It returned &lt;code&gt;1/1&lt;/code&gt; correct and confirmed the full path:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;sampler URI -&amp;gt; tokenizer -&amp;gt; Tinker sample -&amp;gt; boxed-answer extraction -&amp;gt; scoring -&amp;gt; retained artifacts&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;h3 id=&quot;the-six-eval-runs&quot;&gt;The six eval runs&lt;/h3&gt;
+&lt;p&gt;The full sweep ran at &lt;code&gt;--concurrency 16&lt;/code&gt;, no limit, against the six selected sampler checkpoints.&lt;/p&gt;
+&lt;p&gt;The baseline stayed:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;accuracy: &lt;code&gt;0.8453373768006065&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;correct: &lt;code&gt;1115/1319&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;extraction failures: &lt;code&gt;31&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The six LoRA eval runs were:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;seed&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;accuracy&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;correct / total&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;extraction failures&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9044730856709629&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1193 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;6&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9067475360121304&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1196 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9052312357846853&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1194 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;5&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.8991660348749052&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1186 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;5&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9021986353297953&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1190 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;4&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9014404852160728&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1189 / 1319&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;8&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;Aggregated by condition:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;condition&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;mean accuracy&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;min&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;max&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;range&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;attention_only&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9054839524892596&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9044730856709629&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9067475360121304&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.0022744503411676&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td&gt;&lt;code&gt;all_layer&lt;/code&gt;&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9009350518069245&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.8991660348749052&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.9021986353297953&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;0.0030326004548901&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_03_gsm8k_accuracy_chart.CjTnoPdB_Z1BQOLT.webp&quot; alt=&quot;GSM8K accuracy by condition&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;1820&quot; height=&quot;1187&quot;&gt;&lt;/p&gt;
+&lt;p&gt;The mean gap was &lt;code&gt;0.0045489006823352&lt;/code&gt;, or about &lt;code&gt;0.455&lt;/code&gt; percentage points, in favor of attention-only. Under the frozen rule, that is below the &lt;code&gt;0.01&lt;/code&gt; threshold for a winner claim. So the honest reading is local: attention-only ended higher in this run set and used a smaller adapter, but the result stays inside the pre-declared inconclusive band.&lt;/p&gt;
+&lt;h3 id=&quot;the-disagreement-view-made-the-result-easier-to-read&quot;&gt;The disagreement view made the result easier to read&lt;/h3&gt;
+&lt;p&gt;The net accuracy chart showed the final result, but the disagreement chart explained its shape better.&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;/personal0website/_astro/fig_04_paired_seed_slope.ClcugjqE_ZovFPs.webp&quot; alt=&quot;Per-seed prediction disagreement on GSM8K&quot; loading=&quot;lazy&quot; decoding=&quot;async&quot; fetchpriority=&quot;auto&quot; width=&quot;2511&quot; height=&quot;1253&quot;&gt;&lt;/p&gt;
+&lt;p&gt;For paired seeds:&lt;/p&gt;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+&lt;table&gt;&lt;thead&gt;&lt;tr&gt;&lt;th style=&quot;text-align:right&quot;&gt;seed&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;attention-only only&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;all-layer only&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;both correct&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;both wrong&lt;/th&gt;&lt;th style=&quot;text-align:right&quot;&gt;delta&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;&lt;tr&gt;&lt;td style=&quot;text-align:right&quot;&gt;0&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;54&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;47&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1139&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;79&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;+7&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;text-align:right&quot;&gt;1&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;49&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;43&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1147&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;80&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;+6&lt;/td&gt;&lt;/tr&gt;&lt;tr&gt;&lt;td style=&quot;text-align:right&quot;&gt;2&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;46&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;41&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;1148&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;84&lt;/td&gt;&lt;td style=&quot;text-align:right&quot;&gt;+5&lt;/td&gt;&lt;/tr&gt;&lt;/tbody&gt;&lt;/table&gt;
+&lt;p&gt;The two conditions mostly agree, with the difference coming from a narrow band of examples where attention-only is correct slightly more often than the reverse.&lt;/p&gt;
+&lt;h2 id=&quot;9-figures-and-cleanup&quot;&gt;9. Figures And Cleanup&lt;/h2&gt;
+&lt;h3 id=&quot;2026-05-10-the-figure-pass-changed-how-i-told-the-result&quot;&gt;2026-05-10: the figure pass changed how I told the result&lt;/h3&gt;
+&lt;p&gt;The figure pipeline produced eight retained artifacts. This worklog uses four of them:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;fig_03&lt;/code&gt;: GSM8K accuracy by condition&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fig_04&lt;/code&gt;: per-seed prediction disagreement&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fig_05&lt;/code&gt;: validation NLL by training step&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fig_08&lt;/code&gt;: throughput by request shape&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The figure pass forced me to separate claims that were getting blurred together:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;validation NLL explains checkpoint selection&lt;/li&gt;
+&lt;li&gt;GSM8K accuracy explains benchmark performance&lt;/li&gt;
+&lt;li&gt;prediction disagreement explains the narrow accuracy gap&lt;/li&gt;
+&lt;li&gt;throughput explains an operational runner choice&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The fig_04 design took the most iteration. The original idea was a slope/delta view showing net correct-count deltas of &lt;code&gt;+7&lt;/code&gt;, &lt;code&gt;+6&lt;/code&gt;, and &lt;code&gt;+5&lt;/code&gt;. It kept reading like a progression over time or a tiny effect exaggerated by the axis.&lt;/p&gt;
+&lt;p&gt;The raw log records several rejected forms: vertical slope, leader labels, corner text boxes, horizontal dumbbell, vertical paired columns, and delta-only bars. The recurring problem was that the visual form was louder than the claim. A &lt;code&gt;0.4&lt;/code&gt; to &lt;code&gt;0.5&lt;/code&gt; percentage-point gap should not be drawn like a dramatic swing.&lt;/p&gt;
+&lt;p&gt;The final chart became per-seed disagreement small multiples. That matched the actual question better: where do the two conditions disagree?&lt;/p&gt;
+&lt;p&gt;The log records the final contingency numbers before implementation:&lt;/p&gt;
+&lt;pre class=&quot;astro-code astro-code-themes catppuccin-latte catppuccin-mocha&quot; style=&quot;--shiki-light:#4c4f69;--shiki-dark:#cdd6f4;--shiki-light-bg:#eff1f5;--shiki-dark-bg:#1e1e2e;overflow-x:auto&quot; tabindex=&quot;0&quot; data-language=&quot;text&quot;&gt;&lt;code&gt;&lt;span class=&quot;line&quot;&gt;&lt;span&gt;seed 0: attention_only_only=54, all_layer_only=47, both_correct=1139, both_wrong=79&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;seed 1: attention_only_only=49, all_layer_only=43, both_correct=1147, both_wrong=80&lt;/span&gt;&lt;/span&gt;
+&lt;span class=&quot;line&quot;&gt;&lt;span&gt;seed 2: attention_only_only=46, all_layer_only=41, both_correct=1148, both_wrong=84&lt;/span&gt;&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;I kept the filename as &lt;code&gt;fig_04_paired_seed_slope&lt;/code&gt; so existing artifact paths did not move, but the chart itself became the disagreement view.&lt;/p&gt;
+&lt;h3 id=&quot;the-cleanup-rule&quot;&gt;The cleanup rule&lt;/h3&gt;
+&lt;p&gt;The result can say:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;both LoRA conditions improved over the untouched baseline on GSM8K&lt;/li&gt;
+&lt;li&gt;attention-only had the higher three-seed mean in this retained run set&lt;/li&gt;
+&lt;li&gt;attention-only had a small paired-seed disagreement edge&lt;/li&gt;
+&lt;li&gt;the gap is below the frozen &lt;code&gt;0.01&lt;/code&gt; threshold for a winner claim&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The result cannot say:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;attention-only LoRA is generally better&lt;/li&gt;
+&lt;li&gt;all-layer LoRA is bad&lt;/li&gt;
+&lt;li&gt;the same result should hold across other ranks, models, datasets, or benchmarks&lt;/li&gt;
+&lt;li&gt;validation NLL explains the benchmark gap as a mechanism&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;10-what-this-leaves-me-with&quot;&gt;10. What This Leaves Me With&lt;/h2&gt;
+&lt;p&gt;The final comparison was the easy sentence at the end of a lot of setup.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;I started too broad and had to cut the project down to one comparison.&lt;/li&gt;
+&lt;li&gt;I thought the first dataset recipe was close, then the audits kept proving otherwise.&lt;/li&gt;
+&lt;li&gt;I abandoned the augmented-heavy branch because it made the dataset itself the unstable variable.&lt;/li&gt;
+&lt;li&gt;I kept the system prompt because the output contract needed to be explicit.&lt;/li&gt;
+&lt;li&gt;I froze the eval contract before the result existed.&lt;/li&gt;
+&lt;li&gt;I had to repair train/validation leakage by grouping canonical problem text.&lt;/li&gt;
+&lt;li&gt;The smoke pass caught a render mismatch before paid runs.&lt;/li&gt;
+&lt;li&gt;LR selection picked &lt;code&gt;3e-4&lt;/code&gt; for both conditions.&lt;/li&gt;
+&lt;li&gt;Throughput work mattered, but only after batch size stayed controlled.&lt;/li&gt;
+&lt;li&gt;All six main runs selected step &lt;code&gt;3169&lt;/code&gt;.&lt;/li&gt;
+&lt;li&gt;Training checkpoints had to be converted to sampler weights before evaluation.&lt;/li&gt;
+&lt;li&gt;The disagreement chart was more honest than only talking about a mean gap.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The result is small, but the path to making it trustworthy was not.&lt;/p&gt;
+&lt;p&gt;If I were doing the next version, I would keep the same discipline: narrow the question first, freeze contracts before seeing benchmark numbers, treat dataset audits as part of the experiment, and make every convenience change prove that it does not change the comparison. The follow-up question I would carry forward is when a narrower adapter is enough, and when broader adaptation is worth the extra size.&lt;/p&gt;</content:encoded></item></channel></rss>
