@@ -5,6 +5,10 @@ import Footer from "../../components/Footer.astro";
 import { SITE_TITLE } from "../../consts";
 import { PHOTOGRAPHY_CONFIG, PHOTOS } from "../../data/photography";
 import { MapPin, Maximize2, X, Camera } from "lucide-astro";
+
+const baseUrl = import.meta.env.BASE_URL.replace(/\/$/, "");
+const resolveUrl = (path: string) =>
+	path.startsWith("/") && !path.startsWith("//") ? `${baseUrl}${path}` : path;
 ---
 
 <!doctype html>
@@ -34,7 +38,7 @@ import { MapPin, Maximize2, X, Camera } from "lucide-astro";
 							class="photo-card"
 							id={photo.id}
 							data-index={index}
-							data-src={photo.src}
+							data-src={resolveUrl(photo.src)}
 							data-title={photo.title}
 							data-location={photo.location || ""}
 							data-caption={photo.caption}
@@ -42,7 +46,7 @@ import { MapPin, Maximize2, X, Camera } from "lucide-astro";
 						>
 							<div class="photo-media-wrapper">
 								<img
-									src={photo.src}
+									src={resolveUrl(photo.src)}
 									alt={photo.alt}
 									loading="lazy"
 									decoding="async"

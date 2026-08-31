@@ -261,12 +261,12 @@ body {
 	flex-shrink: 0;
 }
 
-[data-theme="dark"] .research-link img[src="/icons/github.svg"],
-[data-theme="dark"] .research-link img[src="/icons/wandb.svg"] {
+[data-theme="dark"] .research-link img[src*="github.svg"],
+[data-theme="dark"] .research-link img[src*="wandb.svg"] {
 	filter: invert(1) brightness(1.35);
 }
 
-[data-theme="dark"] .research-link img[src="/icons/huggingface.svg"] {
+[data-theme="dark"] .research-link img[src*="huggingface.svg"] {
 	filter: none;
 }
 
