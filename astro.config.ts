@@ -26,8 +26,7 @@ const remarkPrettyArrows: Plugin<[], Root> = () => {
 		const filePath = String(file.path ?? file.history?.[0] ?? "");
 
 		if (
-			filePath.includes("/src/content/projects/") ||
-			filePath.includes("/src/content/research/")
+			filePath.includes("/src/content/projects/")
 		) {
 			return;
 		}
@@ -65,3 +64,4 @@ export default defineConfig({
 		rehypePlugins: [rehypeKatex],
 	},
 });
+

@@ -136,16 +136,16 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 	</head>
 
 	<body>
-		<div class="research-theme-toggle">
+		<div class="project-theme-toggle">
 			<ThemeToggle />
 		</div>
-		<article class="research">
-			<header class="research-header">
-				<h1 class="research-title">{title}</h1>
+		<article class="project">
+			<header class="project-header">
+				<h1 class="project-title">{title}</h1>
 
 				{
 					authorList && authorList.length > 0 && (
-						<div class="research-authors">
+						<div class="project-authors">
 							{authorList.map((author, i) => (
 								<>
 									{i > 0 && (
@@ -168,12 +168,12 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 					)
 				}
 
-				<div class="research-date-container">
+				<div class="project-date-container">
 					{
 						hasRevisions ? (
 							<>
 								<time
-									class="research-date"
+									class="project-date"
 									datetime={lastRevisionDate!.toISOString()}
 								>
 									last revised {formatDate(lastRevisionDate!)}
@@ -188,7 +188,7 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 								</button>
 							</>
 						) : (
-							<time class="research-date" datetime={date.toISOString()}>
+							<time class="project-date" datetime={date.toISOString()}>
 								{formatDate(date)}
 							</time>
 						)
@@ -214,13 +214,13 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 				}
 				{
 					(codeUrl || modelUrl || websiteUrl || logsUrl || pdfUrl) && (
-						<div class="research-links">
+						<div class="project-links">
 							{codeUrl && (
 								<a
 									href={codeUrl}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="research-link"
+									class="project-link"
 								>
 									<img
 										src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/icons/github.svg`}
@@ -237,7 +237,7 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 									href={modelUrl}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="research-link"
+									class="project-link"
 								>
 									<img
 										src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/icons/huggingface.svg`}
@@ -254,7 +254,7 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 									href={logsUrl}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="research-link"
+									class="project-link"
 								>
 									<img
 										src={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/icons/wandb.svg`}
@@ -271,7 +271,7 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 									href={pdfUrl}
 									target="_blank"
 									rel="noopener noreferrer"
-									class="research-link"
+									class="project-link"
 								>
 									<FileText aria-hidden="true" size={16} strokeWidth={1.5} />
 									<span>Paper</span>
@@ -300,11 +300,11 @@ const lastRevisionDate = hasRevisions ? sortedRevisions[0].date : null;
 				)
 			}
 
-			<main class="research-content">
+			<main class="project-content">
 				<slot />
 			</main>
 
-			<footer class="research-footer">
+			<footer class="project-footer">
 				<a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/projects`}>Back to Projects</a>
 				<span class="separator">|</span>
 				<a href={import.meta.env.BASE_URL}>{SITE_TITLE}</a>

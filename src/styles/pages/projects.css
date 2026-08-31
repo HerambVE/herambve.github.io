@@ -1,47 +1,40 @@
-.projects-page h1,
-.research-page h1 {
+.projects-page h1 {
 	margin-bottom: 0.5em;
 }
 
-.projects-page ul,
-.research-page ul {
+.projects-page ul {
 	list-style-type: none;
 	margin: 0;
 	padding: 0;
 }
 
-.projects-page li,
-.research-page li {
+.projects-page li {
 	padding-top: 1.25em;
 	padding-bottom: 1.5em;
 	border-bottom: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
 }
 
-.projects-page li:last-child,
-.research-page li:last-child {
+.projects-page li:last-child {
 	border-bottom: none;
 	padding-bottom: 0;
 }
 
-.projects-page a,
-.research-page a {
+.projects-page a {
 	text-decoration: none;
 }
 
 .projects-page a:hover .report-title,
-.research-page a:hover .report-title {
+.projects-page a:hover .report-title {
 	color: var(--accent-purple);
 }
 
-.projects-page .report-title,
-.research-page .report-title {
+.projects-page .report-title {
 	margin: 0 0 0.5em 0;
 	padding: 0;
 	font-size: 1.25em;
 }
 
-.projects-page .report-abstract,
-.research-page .report-abstract {
+.projects-page .report-abstract {
 	color: var(--text-color-muted);
 	font-size: 0.95em;
 	font-weight: var(--font-weight-light);
@@ -54,16 +47,14 @@
 	overflow: hidden;
 }
 
-.projects-page .report-meta,
-.research-page .report-meta {
+.projects-page .report-meta {
 	display: flex;
 	align-items: center;
 	gap: 0.75em;
 	color: var(--text-muted);
 }
 
-.projects-page .report-updated,
-.research-page .report-updated {
+.projects-page .report-updated {
 	font-size: 0.9em;
 	font-style: italic;
 }
@@ -74,31 +65,31 @@
 }
 
 @media (max-width: 720px) {
-	.research-page li {
+	.projects-page li {
 		padding-top: 1em;
 		padding-bottom: 1.25em;
 	}
 
-	.research-page li:last-child {
+	.projects-page li:last-child {
 		padding-bottom: 0;
 	}
 
-	.research-page .report-title {
+	.projects-page .report-title {
 		font-size: 1.1em;
 	}
 }
 
 @media (max-width: 480px) {
-	.research-page li {
+	.projects-page li {
 		padding-top: 0.75em;
 		padding-bottom: 1em;
 	}
 
-	.research-page li:last-child {
+	.projects-page li:last-child {
 		padding-bottom: 0;
 	}
 
-	.research-page .report-title {
+	.projects-page .report-title {
 		font-size: 1em;
 	}
 }
