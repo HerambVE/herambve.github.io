@@ -5,10 +5,10 @@ import Header from "../../components/Header.astro";
 import Footer from "../../components/Footer.astro";
 import ViewCounter from "../../components/ViewCounter.astro";
 import DateMeta from "../../components/DateMeta.astro";
-import { RESEARCH_BASE_PAGE_DESCRIPTION, SITE_TITLE, WORKER_URL } from "../../consts";
-import "../../styles/pages/research.css";
+import { PROJECTS_BASE_PAGE_DESCRIPTION, SITE_TITLE, WORKER_URL } from "../../consts";
+import "../../styles/pages/projects.css";
 
-const research = (await getCollection("research"))
+const projects = (await getCollection("projects"))
 	.filter((item) => !item.data.draft)
 	.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
 ---
@@ -18,23 +18,27 @@ const research = (await getCollection("research"))
 	<head>
 		<BaseHead
 			title={`Projects | ${SITE_TITLE}`}
-			description={RESEARCH_BASE_PAGE_DESCRIPTION}
+			description={PROJECTS_BASE_PAGE_DESCRIPTION}
 		/>
 	</head>
 	<body>
 		<Header />
-		<main class="research-page">
-			<h1>Projects & Research</h1>
+		<main class="projects-page">
+			<h1>Projects</h1>
 			<ul>
 				{
-					research.map((item) => (
+					projects.map((item) => (
 						<li>
-							<a href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/research/${item.id}/`}>
+							<a
+								href={item.data.codeUrl || `${import.meta.env.BASE_URL.replace(/\/$/, "")}/projects/${item.id}/`}
+								target={item.data.codeUrl ? "_blank" : undefined}
+								rel={item.data.codeUrl ? "noopener noreferrer" : undefined}
+							>
 								<h2 class="report-title">{item.data.title}</h2>
 							</a>
 							{item.data.subtitle && (
-									<p class="report-abstract">{item.data.subtitle}</p>
-								)}
+								<p class="report-abstract">{item.data.subtitle}</p>
+							)}
 							<div class="report-meta">
 								{(() => {
 									const latestDate = item.data.revisions && item.data.revisions.length > 0
@@ -44,15 +48,15 @@ const research = (await getCollection("research"))
 										<DateMeta date={latestDate} as="span" />
 									);
 								})()}
-								<ViewCounter slug={`research/${item.id}`} workerUrl={WORKER_URL} readOnly={true} />
+								<ViewCounter slug={`projects/${item.id}`} workerUrl={WORKER_URL} readOnly={true} />
 							</div>
 						</li>
 					))
 				}
 			</ul>
 			{
-				research.length === 0 && (
-					<p class="no-reports">No reports published yet.</p>
+				projects.length === 0 && (
+					<p class="no-reports">No projects published yet.</p>
 				)
 			}
 		</main>

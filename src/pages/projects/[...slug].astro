@@ -1,22 +1,22 @@
 ---
 import { type CollectionEntry, getCollection, render } from "astro:content";
-import ResearchLayout from "../../layouts/ResearchLayout.astro";
+import ProjectLayout from "../../layouts/ProjectLayout.astro";
 import { WORKER_URL } from "../../consts";
 
 export async function getStaticPaths() {
-	const research = await getCollection("research");
-	return research.map((item) => ({
+	const projects = await getCollection("projects");
+	return projects.map((item) => ({
 		params: { slug: item.id },
 		props: item,
 	}));
 }
 
-type Props = CollectionEntry<"research">;
+type Props = CollectionEntry<"projects">;
 
 const item = Astro.props;
 const { Content } = await render(item);
 ---
 
-<ResearchLayout {...item.data} slug={`research/${item.id}`} workerUrl={WORKER_URL}>
+<ProjectLayout {...item.data} slug={`projects/${item.id}`} workerUrl={WORKER_URL}>
 	<Content />
-</ResearchLayout>
+</ProjectLayout>

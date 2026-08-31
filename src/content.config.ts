@@ -38,8 +38,8 @@ const pages = defineCollection({
 		}),
 });
 
-const research = defineCollection({
-	loader: glob({ base: "./src/content/research", pattern: "**/*.{md,mdx}" }),
+const projects = defineCollection({
+	loader: glob({ base: "./src/content/projects", pattern: "**/*.{md,mdx}" }),
 	schema: ({ image }) =>
 		z.object({
 			title: z.string(),
@@ -89,4 +89,4 @@ const weekly = defineCollection({
 		}),
 });
 
-export const collections = { blog, pages, research, weekly };
+export const collections = { blog, pages, projects, weekly };

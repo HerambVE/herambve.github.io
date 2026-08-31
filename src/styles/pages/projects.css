@@ -1,38 +1,46 @@
+.projects-page h1,
 .research-page h1 {
 	margin-bottom: 0.5em;
 }
 
+.projects-page ul,
 .research-page ul {
 	list-style-type: none;
 	margin: 0;
 	padding: 0;
 }
 
+.projects-page li,
 .research-page li {
 	padding-top: 1.25em;
 	padding-bottom: 1.5em;
 	border-bottom: 1px solid var(--border-color, rgba(128, 128, 128, 0.2));
 }
 
+.projects-page li:last-child,
 .research-page li:last-child {
 	border-bottom: none;
 	padding-bottom: 0;
 }
 
+.projects-page a,
 .research-page a {
 	text-decoration: none;
 }
 
+.projects-page a:hover .report-title,
 .research-page a:hover .report-title {
 	color: var(--accent-purple);
 }
 
+.projects-page .report-title,
 .research-page .report-title {
 	margin: 0 0 0.5em 0;
 	padding: 0;
 	font-size: 1.25em;
 }
 
+.projects-page .report-abstract,
 .research-page .report-abstract {
 	color: var(--text-color-muted);
 	font-size: 0.95em;
@@ -46,6 +54,7 @@
 	overflow: hidden;
 }
 
+.projects-page .report-meta,
 .research-page .report-meta {
 	display: flex;
 	align-items: center;
@@ -53,6 +62,7 @@
 	color: var(--text-muted);
 }
 
+.projects-page .report-updated,
 .research-page .report-updated {
 	font-size: 0.9em;
 	font-style: italic;

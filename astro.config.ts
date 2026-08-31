@@ -25,7 +25,10 @@ const remarkPrettyArrows: Plugin<[], Root> = () => {
 	const transformer: Transformer<Root, Root> = (tree, file) => {
 		const filePath = String(file.path ?? file.history?.[0] ?? "");
 
-		if (filePath.includes("/src/content/research/")) {
+		if (
+			filePath.includes("/src/content/projects/") ||
+			filePath.includes("/src/content/research/")
+		) {
 			return;
 		}
 
