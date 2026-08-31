@@ -1,4 +1,4 @@
-﻿# personal0website (herambve)
+# personal0website (herambve)
 
 Personal portfolio, systems & AI engineering writeups, worklogs, and photography by **Heramb Vengurlekar**.
 
@@ -48,3 +48,9 @@ Live Website: [https://herambve.github.io/personal0website/](https://herambve.gi
 - `src/pages/research/` — Systems architecture and machine learning project writeups
 - `src/pages/blog/` — Engineering articles and technical logs
 - `src/pages/photography/` — Interactive masonry card photo gallery with full-screen lightbox
+
+---
+
+## 🙏 Acknowledgments
+
+Base template architecture adapted from [sumitdotml/sumit.ml](https://github.com/sumitdotml/sumit.ml) (MIT License).
