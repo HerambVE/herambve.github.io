@@ -1,0 +1,54 @@
+---
+title: "Apple Sorting System"
+subtitle: "An automated hardware-software hybrid system for sorting apples based on surface diseases using Vision Transformers and a Raspberry Pi."
+image: "../../assets/placeholder-image.png"
+date: 2026-09-06
+authors:
+  - name: "Heramb Vengurlekar"
+    email: "vengurlekarheramb19@gmail.com"
+    affiliation: "Thadomal Shahani Engineering College"
+codeUrl: "https://github.com/HerambVE/apple_sorting_system"
+keywords:
+  - "Machine Learning"
+  - "Computer Vision"
+  - "Vision Transformer (ViT)"
+  - "PyTorch"
+  - "Raspberry Pi"
+  - "C++"
+  - "IoT"
+draft: false
+---
+
+## Overview
+
+An automated hardware-software hybrid system for sorting apples based on surface diseases. The project uses a physical conveyor belt powered by a Raspberry Pi, which orchestrates sensors, servos, and cameras to classify and mechanically separate apples into four distinct categories: Normal, Blotch, Rot, and Scab.
+
+## 🚀 Features
+
+- **Real-Time Sorting**: Physically routes apples on a conveyor belt using servo-actuated gates.
+- **Dual-Camera Vision**: Captures two angles (top and side) using a CSI camera and a USB webcam simultaneously for higher classification accuracy.
+- **Cloud AI Processing**: Uses a Vision Transformer (ViT) deployed via ngrok on Google Colab for powerful, off-device inference.
+- **Hardware Integration**: Full C++ implementation using `pigpio` for non-blocking hardware control on the Raspberry Pi.
+- **Safety / Rejection**: Confidence thresholding to reject non-apple objects.
+
+## 🏗 System Architecture
+
+The system operates using an edge-to-cloud architecture:
+1. **Detection**: An IR sensor detects an apple on the conveyor belt.
+2. **Capture**: The Raspberry Pi stops the belt and captures two images.
+3. **Inference**: Images are sent via `libcurl` to the Colab API.
+4. **Action**: The API returns a classification. The Raspberry Pi actuates the corresponding servo and restarts the belt.
+
+## 📦 Classification Categories
+
+The Vision Transformer model is trained to recognize four classes:
+- 🟢 **Normal**: Healthy apples (continue on belt).
+- 🟤 **Blotch**: Apples with blotch disease (Servo 1).
+- ⚫ **Rot**: Apples with rot/decay (Servo 2).
+- 🟡 **Scab**: Apples with scab disease (Servo 3).
+
+## 🛠 Contributions
+
+- Designed and developed the **C++ Edge Controller** (`pigpio`, multi-threaded hardware orchestration, non-blocking asynchronous camera triggers, and HTTP client via `libcurl`).
+- Engineered the **Vision Transformer (ViT)** Deep Learning pipeline in PyTorch (`vit_base_patch16_224`), including transfer learning, class weighting, and data augmentations.
+- Built the **Cloud Inference Microservice** (Flask + ngrok) with dual-camera perspective aggregation and defect arbitration logic.

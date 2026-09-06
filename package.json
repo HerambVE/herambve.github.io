@@ -9,6 +9,7 @@
 		"astro": "astro",
 		"generate:dedup-salt": "node scripts/generate-dedup-salt.mjs",
 		"generate:view-counter-api-key": "node scripts/generate-view-counter-api-key.mjs",
+		"new": "node scripts/new-post.mjs",
 		"lint": "eslint . --ext .astro,.ts,.tsx,.js,.jsx,.mjs,.cjs && echo '✓ Linting complete: No issues found'",
 		"lint:fix": "eslint . --ext .astro,.ts,.tsx,.js,.jsx,.mjs,.cjs --fix && echo '✓ Linting complete: All issues fixed.'",
 		"format": "prettier --check \"**/*.{astro,css,js,ts,tsx,json}\"",
